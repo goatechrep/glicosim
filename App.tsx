@@ -50,13 +50,14 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
     const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+      const root = document.documentElement;
       if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
+        root.classList.add('dark');
       } else if (theme === 'light') {
-        document.documentElement.classList.remove('dark');
+        root.classList.remove('dark');
       } else {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.classList.toggle('dark', isDark);
+        root.classList.toggle('dark', isDark);
       }
     };
     applyTheme(user.theme);
@@ -88,7 +89,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { user, loading } = useAuth();
   if (loading) return (
     <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b]">
-      <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
   if (!user) return <Navigate to="/login" />;
@@ -100,7 +101,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <HashRouter>
-        <div className="min-h-screen bg-white dark:bg-[#09090b] text-slate-950 dark:text-slate-50 transition-colors duration-200">
+        <div className="min-h-screen bg-white dark:bg-[#09090b] text-slate-950 dark:text-slate-50 overflow-hidden">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/onboarding" element={
@@ -110,46 +111,55 @@ const App: React.FC = () => {
             } />
             <Route path="/*" element={
               <PrivateRoute>
-                <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden">
                   {/* Desktop Sidebar */}
                   <div className="hidden md:block">
                     <Sidebar />
                   </div>
 
-                  {/* Mobile Top Header */}
-                  <div className="md:hidden flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#09090b] z-50">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-orange-600 font-bold text-2xl">bloodtype</span>
-                      <span className="font-bold text-lg tracking-tight">GlicoSIM</span>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    {/* Mobile Top Header */}
+                    <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl z-50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3">
+                          <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
+                        </div>
+                        <span className="font-black text-base tracking-tighter italic uppercase">GlicoSIM</span>
+                      </div>
+                      <NavLink to="/ajustes" className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90">
+                        <span className="material-symbols-outlined text-slate-500 text-[20px]">person</span>
+                      </NavLink>
                     </div>
-                    <NavLink to="/ajustes" className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
-                      <span className="material-symbols-outlined text-slate-500">account_circle</span>
-                    </NavLink>
+
+                    <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar">
+                      <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/registros" element={<RecordsPage />} />
+                        <Route path="/alertas" element={<AlertsPage />} />
+                        <Route path="/ajustes" element={<SettingsPage />} />
+                        <Route path="*" element={<Navigate to="/" />} />
+                      </Routes>
+                    </main>
+
+                    {/* Mobile Bottom Navigation */}
+                    <nav className="md:hidden sticky bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-around px-4 z-50 pb-2">
+                      <MobileNavItem to="/" icon="home" label="Início" />
+                      <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
+                      <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />
+                      <MobileNavItem to="/ajustes" icon="settings" label="Ajustes" />
+                    </nav>
                   </div>
-
-                  <main className="flex-1 overflow-y-auto pb-24 md:pb-8 p-4 md:p-8 w-full max-w-[1400px] mx-auto">
-                    <Routes>
-                      <Route path="/" element={<DashboardPage />} />
-                      <Route path="/registros" element={<RecordsPage />} />
-                      <Route path="/alertas" element={<AlertsPage />} />
-                      <Route path="/ajustes" element={<SettingsPage />} />
-                      <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                  </main>
-
-                  {/* Mobile Bottom Navigation */}
-                  <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-4 z-50">
-                    <MobileNavItem to="/" icon="home" label="Início" />
-                    <MobileNavItem to="/registros" icon="analytics" label="Registros" />
-                    <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />
-                    <MobileNavItem to="/ajustes" icon="settings" label="Ajustes" />
-                  </nav>
                 </div>
               </PrivateRoute>
             } />
           </Routes>
         </div>
       </HashRouter>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+      `}</style>
     </AuthProvider>
   );
 };
@@ -158,11 +168,11 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink 
     to={to} 
     className={({ isActive }) => 
-      `flex flex-col items-center gap-1 transition-all ${isActive ? 'text-orange-600 active' : 'text-slate-400'}`
+      `flex flex-col items-center gap-1.5 transition-all px-4 py-2 rounded-2xl ${isActive ? 'text-orange-600 bg-orange-50/50 dark:bg-orange-950/20 active' : 'text-slate-400'}`
     }
   >
     <span className="material-symbols-outlined text-[24px]">{icon}</span>
-    <span className="text-[10px] font-medium">{label}</span>
+    <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
   </NavLink>
 );
 

@@ -20,56 +20,56 @@ const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 h-full bg-white dark:bg-[#09090b] flex flex-col border-r border-slate-200 dark:border-slate-800">
-      <div className="px-6 py-10 flex items-center gap-2.5">
-        <div className="w-9 h-9 bg-orange-600 rounded-lg flex items-center justify-center">
-          <span className="material-symbols-outlined text-white text-[22px] font-bold">bloodtype</span>
+    <aside className="w-72 h-full bg-white dark:bg-[#09090b] flex flex-col border-r border-slate-200 dark:border-slate-800/60 p-6">
+      <div className="px-2 py-8 flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 rotate-3 transition-transform hover:rotate-0">
+          <span className="material-symbols-outlined text-white text-[24px] font-bold">bloodtype</span>
         </div>
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none">GlicoSIM</h1>
-          <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wider mt-1">Premium Monitor</p>
+          <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none uppercase italic">GlicoSIM</h1>
+          <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mt-1">Premium Health</p>
         </div>
       </div>
 
-      <div className="px-4 py-2">
-        <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Menu Principal</p>
-        <nav className="space-y-1">
+      <div className="flex-1 space-y-1">
+        <p className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-6">Menu de Controle</p>
+        <nav className="space-y-2">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 ${
                   isActive
-                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900/50'
+                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm active'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40'
                 }`
               }
             >
-              <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+              <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
         </nav>
       </div>
 
-      <div className="mt-auto p-4">
-        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center text-orange-600 font-bold text-xs">
+      <div className="mt-auto">
+        <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 mb-4 group transition-all hover:border-orange-200 dark:hover:border-orange-900/30">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-11 h-11 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 font-black text-sm border border-orange-200 dark:border-orange-800 transition-transform group-hover:scale-110">
               {user?.nome?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user?.nome}</p>
-              <p className="text-[10px] text-slate-500 truncate lowercase">{user?.email}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.nome}</p>
+              <p className="text-[10px] text-slate-500 font-semibold truncate lowercase tracking-wide">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-1.5 text-[11px] font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
           >
-            <span className="material-symbols-outlined text-[16px]">logout</span>
-            Encerrar Sessão
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Sair do App
           </button>
         </div>
       </div>
