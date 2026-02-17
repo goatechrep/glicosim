@@ -1,0 +1,7 @@
+{
+  "name": "GlicoSIM",
+  "description": "Sistema moderno de monitoramento glicêmico e controle de assinaturas recorrentes para diabéticos.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
