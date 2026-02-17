@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { mockService } from '../services/mockService';
-import { GlucoseRecord, Alert } from '../types';
+import { GlucoseRecord } from '../types';
 
 const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -20,142 +20,86 @@ const DashboardPage: React.FC = () => {
     loadData();
   }, []);
 
-  if (loading) return <div className="text-center py-20 font-bold uppercase tracking-widest opacity-50">Carregando Dashboard...</div>;
+  if (loading) return (
+    <div className="flex h-full items-center justify-center">
+      <div className="w-8 h-8 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
-  const chartData = [...records].reverse().slice(-10).map(r => ({
-    name: r.data.split('-').reverse().join('/'),
-    val: r.antesRefeicao
+  const chartData = [...records].reverse().slice(-7).map(r => ({
+    name: r.data.split('-')[2],
+    val: r.antesRefeicao,
   }));
 
-  const pieData = [
-    { name: 'No Alvo', value: records.filter(r => r.antesRefeicao >= 70 && r.antesRefeicao <= 100).length },
-    { name: 'Alto', value: records.filter(r => r.antesRefeicao > 100).length },
-    { name: 'Baixo', value: records.filter(r => r.antesRefeicao < 70).length },
-  ];
-
-  const COLORS = ['#3b82f6', '#ef4444', '#f59e0b'];
-
   return (
-    <div className="space-y-8 pb-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col gap-6 animate-fade-in pb-12">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black tracking-tighter uppercase italic">Visão Geral</h2>
-          <p className="text-gray-500 text-sm">Acompanhe seu desempenho glicêmico em tempo real.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Visão geral do seu controle glicêmico.</p>
         </div>
-        <div className="text-xs font-bold uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 border border-gray-200 dark:border-gray-700">
-          {/* Fix: hour and minute should be '2-digit' or 'numeric', not '2d' */}
-          Atualizado hoje às {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-      </header>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Última Glicemia" value={stats.lastGlicemy} unit="mg/dL" trend="neutral" subtitle="Último registro" />
-        <KPICard title="Média Semanal" value={stats.average} unit="mg/dL" trend={stats.average < 100 ? 'good' : 'warning'} subtitle="Média total" />
-        <KPICard title="Status Meta" value={stats.goalStatus} unit="" trend={stats.goalStatus === 'No Alvo' ? 'good' : 'warning'} subtitle="Meta 55-100 mg/dL" />
-        <KPICard title="Total Registros" value={stats.totalRecords} unit="" trend="neutral" subtitle="Desde o início" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500">Tendência Semanal</h3>
-            <div className="flex gap-2">
-              <span className="w-3 h-3 bg-blue-500"></span>
-              <span className="text-[10px] font-bold text-gray-500 uppercase">Glicemia (mg/dL)</span>
-            </div>
+      {/* KPI Cards Grid */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend="+2%" />
+        <Card title="No Alvo" value="85%" unit="ideal" icon="check_circle" color="text-emerald-500" />
+        <Card title="Última" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
+        <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500" />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid gap-6 md:grid-cols-12">
+        {/* Charts Section */}
+        <div className="md:col-span-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="text-sm font-bold uppercase tracking-wider">Tendência Semanal</h3>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="p-4 h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                <XAxis dataKey="name" stroke="#6b7280" fontSize={10} axisLine={false} tickLine={false} />
-                <YAxis stroke="#6b7280" fontSize={10} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#000', border: '1px solid #374151', borderRadius: '0px' }}
-                  itemStyle={{ color: '#fff' }}
+                  contentStyle={{backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} 
                 />
-                <Area type="monotone" dataKey="val" stroke="#3b82f6" fillOpacity={1} fill="url(#colorVal)" strokeWidth={3} />
+                <Area type="monotone" dataKey="val" stroke="#f97316" strokeWidth={3} fillOpacity={1} fill="url(#orangeGrad)" dot={{fill: '#f97316', r: 4, strokeWidth: 2, stroke: '#fff'}} activeDot={{ r: 6, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Distribution Chart */}
-        <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 p-6">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-6">Distribuição</h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Recent Activity Section */}
+        <div className="md:col-span-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="text-sm font-bold uppercase tracking-wider">Últimas Medições</h3>
           </div>
-          <div className="space-y-2 mt-4">
-            {pieData.map((item, idx) => (
-              <div key={item.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2" style={{ backgroundColor: COLORS[idx] }}></span>
-                  <span className="text-gray-400 font-bold uppercase">{item.name}</span>
+          <div className="p-6">
+            <div className="space-y-6">
+              {records.slice(0, 4).map(record => (
+                <div key={record.id} className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white leading-none">{record.periodo}</span>
+                    <span className="text-[10px] text-slate-500 mt-1">{record.data.split('-').reverse().slice(0,2).join('/')}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-sm font-black ${record.antesRefeicao > 140 ? 'text-amber-600' : 'text-orange-600'}`}>{record.antesRefeicao}</span>
+                    <span className="text-[9px] text-slate-400 font-bold ml-1">mg/dL</span>
+                  </div>
                 </div>
-                <span className="font-black italic">{item.value} registros</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Latest Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 p-6">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">Últimos Alertas</h3>
-          <div className="space-y-3">
-            {stats.alerts.slice(0, 3).map((alert: Alert) => (
-              <div key={alert.id} className="p-3 bg-gray-50 dark:bg-gray-900 border-l-4 border-blue-500 flex justify-between items-start">
-                <div>
-                  <p className="font-bold text-sm uppercase italic">{alert.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">{alert.description}</p>
-                </div>
-                <span className="text-[10px] font-bold text-gray-400">{alert.date}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 p-6">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">Recentes</h3>
-          <div className="space-y-4">
-            {records.slice(0, 5).map((rec: GlucoseRecord) => (
-              <div key={rec.id} className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-tighter italic">{rec.periodo}</p>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold">{rec.data}</p>
-                </div>
-                <div className="text-xl font-black italic text-blue-500">
-                  {rec.antesRefeicao} <span className="text-[10px] font-normal not-italic text-gray-400">mg/dL</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button className="w-full mt-8 py-2 text-[10px] font-bold text-slate-400 hover:text-orange-600 uppercase tracking-widest border border-dashed border-slate-200 dark:border-slate-800 rounded-lg transition-all">
+              Histórico Completo
+            </button>
           </div>
         </div>
       </div>
@@ -163,20 +107,27 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-const KPICard: React.FC<{ title: string; value: string | number; unit: string; trend: 'good' | 'warning' | 'neutral'; subtitle: string }> = ({ title, value, unit, trend, subtitle }) => {
-  const trendColor = trend === 'good' ? 'text-green-500' : trend === 'warning' ? 'text-red-500' : 'text-blue-500';
-  return (
-    <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 p-6 flex flex-col justify-between transition-transform hover:scale-[1.02]">
-      <div>
-        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1">{title}</h4>
-        <div className="flex items-baseline gap-2">
-          <span className={`text-4xl font-black italic tracking-tighter ${trendColor}`}>{value}</span>
-          <span className="text-xs font-bold text-gray-500">{unit}</span>
-        </div>
-      </div>
-      <p className="text-[10px] font-bold text-gray-400 uppercase mt-4 tracking-wider">{subtitle}</p>
+interface CardProps {
+  title: string;
+  value: string;
+  unit: string;
+  icon: string;
+  color?: string;
+  trend?: string;
+}
+
+const Card: React.FC<CardProps> = ({ title, value, unit, icon, color = "text-slate-900 dark:text-white", trend }) => (
+  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate mr-1">{title}</span>
+      <span className="material-symbols-outlined text-slate-300 text-[18px]">{icon}</span>
     </div>
-  );
-};
+    <div className="flex items-baseline gap-1">
+      <span className={`text-xl font-bold tracking-tight ${color}`}>{value}</span>
+      <span className="text-[9px] text-slate-400 font-bold uppercase">{unit}</span>
+    </div>
+    {trend && <span className="text-[9px] font-bold text-emerald-500 mt-1 block">{trend} vs mês ant.</span>}
+  </div>
+);
 
 export default DashboardPage;

@@ -7,7 +7,7 @@ import { Periodo, Medicamento } from '../types';
 
 const OnboardingPage: React.FC = () => {
   const [step, setStep] = useState(1);
-  const [glicemy, setGlicemy] = useState<number>(0);
+  const [glicemy, setGlicemy] = useState<number>(100); // Mocked for easy testing
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
@@ -17,7 +17,7 @@ const OnboardingPage: React.FC = () => {
       medicamento: Medicamento.NENHUM,
       antesRefeicao: glicemy,
       dose: '0',
-      notes: 'Registro inicial de boas-vindas',
+      notes: 'Setup inicial realizado com sucesso.',
       data: new Date().toISOString().split('T')[0]
     });
     await mockService.updateUser({ isOnboarded: true });
@@ -26,54 +26,62 @@ const OnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6 text-white">
-      <div className="max-w-md w-full space-y-12">
-        {step === 1 && (
-          <div className="space-y-6 text-center animate-fadeIn">
-            <div className="mx-auto w-24 h-24 bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-5xl">
-              👋
+    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] flex items-center justify-center p-6">
+      <div className="max-w-md w-full">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-10 rounded-2xl elevation-2 text-center animate-fade-in">
+          
+          {step === 1 ? (
+            <div className="space-y-6">
+              <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full flex items-center justify-center mx-auto">
+                <span className="material-symbols-outlined text-3xl">celebration</span>
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold dark:text-white">Bem-vindo ao GlicoSIM</h1>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  Vamos configurar seu perfil rapidamente para você começar a monitorar sua saúde hoje mesmo.
+                </p>
+              </div>
+              <button
+                onClick={() => setStep(2)}
+                className="w-full py-3 bg-orange-600 text-white font-semibold text-sm rounded-lg hover:bg-orange-700 transition-all"
+              >
+                Começar Configuração
+              </button>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter">BEM-VINDO AO GLICOSIM</h1>
-            <p className="text-gray-400 leading-relaxed">
-              O controle da sua saúde começa agora. Vamos configurar o básico para você começar com o pé direito.
-            </p>
-            <button
-              onClick={() => setStep(2)}
-              className="w-full py-5 bg-white text-black font-black uppercase tracking-widest hover:bg-gray-200 transition-all"
-            >
-              VAMOS COMEÇAR
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                 <span className="text-orange-600 text-[11px] font-bold uppercase tracking-widest">Passo Final</span>
+                 <h2 className="text-xl font-bold dark:text-white">Qual sua glicemia agora?</h2>
+              </div>
+              
+              <div className="py-8">
+                <div className="relative inline-block w-full">
+                  <input
+                    type="number"
+                    value={glicemy || ''}
+                    onChange={(e) => setGlicemy(Number(e.target.value))}
+                    className="w-full text-center text-6xl font-black bg-transparent border-none outline-none dark:text-white text-orange-600"
+                  />
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">mg/dL</div>
+                </div>
+              </div>
 
-        {step === 2 && (
-          <div className="space-y-8 animate-fadeIn">
-            <div className="text-center space-y-2">
-              <span className="text-xs font-bold text-blue-500 uppercase tracking-widest">Passo Final</span>
-              <h2 className="text-3xl font-black tracking-tighter italic">SUA PRIMEIRA MEDIÇÃO</h2>
-              <p className="text-gray-400">Como está sua glicemia agora?</p>
+              <button
+                onClick={handleFinish}
+                disabled={!glicemy}
+                className="w-full py-3 bg-orange-600 text-white font-semibold text-sm rounded-lg hover:bg-orange-700 transition-all disabled:opacity-50"
+              >
+                Finalizar e Ir ao Painel
+              </button>
             </div>
-            
-            <div className="space-y-4">
-              <input
-                type="number"
-                placeholder="0"
-                value={glicemy || ''}
-                onChange={(e) => setGlicemy(Number(e.target.value))}
-                className="w-full text-center text-7xl font-black bg-transparent border-b-2 border-gray-800 focus:border-blue-500 outline-none py-4"
-              />
-              <p className="text-center text-xs font-bold text-gray-600 uppercase tracking-widest">mg/dL</p>
-            </div>
+          )}
 
-            <button
-              onClick={handleFinish}
-              disabled={!glicemy}
-              className="w-full py-5 bg-blue-600 text-white font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-30"
-            >
-              FINALIZAR CONFIGURAÇÃO
-            </button>
+          <div className="mt-8 flex justify-center gap-1.5">
+             <div className={`h-1.5 rounded-full transition-all ${step === 1 ? 'w-8 bg-orange-600' : 'w-2 bg-slate-200 dark:bg-slate-800'}`}></div>
+             <div className={`h-1.5 rounded-full transition-all ${step === 2 ? 'w-8 bg-orange-600' : 'w-2 bg-slate-200 dark:bg-slate-800'}`}></div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

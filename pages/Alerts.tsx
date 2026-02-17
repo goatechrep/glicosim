@@ -16,37 +16,48 @@ const AlertsPage: React.FC = () => {
     fetch();
   }, []);
 
-  const severityColors = {
-    low: 'border-blue-500',
-    medium: 'border-yellow-500',
-    high: 'border-red-500'
+  const severityStyles = {
+    low: 'bg-slate-100 dark:bg-slate-800 text-slate-600 border-slate-200 dark:border-slate-700',
+    medium: 'bg-orange-50 dark:bg-orange-900/10 text-orange-600 border-orange-100 dark:border-orange-900/20',
+    high: 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20'
   };
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-3xl font-black tracking-tighter uppercase italic">Alertas</h2>
-        <p className="text-gray-500 text-sm">Notificações importantes sobre sua saúde e assinatura.</p>
+    <div className="animate-fade-in space-y-8 pb-12">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Notificações</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Fique por dentro dos alertas importantes do GlicoSIM.</p>
+        </div>
+        <button className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors px-3 py-1 border border-orange-100 dark:border-orange-900/30 rounded-md">Limpar Histórico</button>
       </header>
 
       <div className="grid grid-cols-1 gap-4">
         {loading ? (
-            <div className="p-10 text-center uppercase tracking-widest text-xs font-bold opacity-50">Sincronizando alertas...</div>
+          <div className="flex h-64 items-center justify-center font-medium text-slate-400">Carregando notificações...</div>
         ) : alerts.length === 0 ? (
-            <div className="p-10 text-center uppercase tracking-widest text-xs font-bold text-gray-500">Nenhum alerta no momento.</div>
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-16 text-center shadow-sm">
+            <span className="material-symbols-outlined text-4xl text-slate-200 mb-2">notifications_off</span>
+            <p className="text-slate-500 font-medium">Tudo limpo por aqui!</p>
+          </div>
         ) : alerts.map(alert => (
-          <div key={alert.id} className={`bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 border-l-8 ${severityColors[alert.severity]} p-6 flex items-start justify-between`}>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-xs font-black uppercase tracking-widest text-gray-500">{alert.date}</span>
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 ${alert.severity === 'high' ? 'bg-red-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}`}>
-                  Prioridade {alert.severity}
-                </span>
-              </div>
-              <h3 className="text-xl font-black italic tracking-tighter uppercase mb-2">{alert.title}</h3>
-              <p className="text-sm text-gray-400 max-w-xl">{alert.description}</p>
+          <div key={alert.id} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-xl flex items-start gap-4 hover:shadow-md transition-all group">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${severityStyles[alert.severity]}`}>
+              <span className="material-symbols-outlined text-[20px]">
+                {alert.severity === 'high' ? 'error' : alert.severity === 'medium' ? 'warning' : 'info'}
+              </span>
             </div>
-            <button className="text-xs font-bold uppercase text-gray-500 hover:text-white transition-colors">Marcar como lido</button>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-orange-600 transition-colors">{alert.title}</h3>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{alert.date}</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">{alert.description}</p>
+              <div className="flex gap-2">
+                <button className="px-4 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Marcar como lida</button>
+                <button className="px-4 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 border border-orange-100 dark:border-orange-900/30 text-[10px] font-bold uppercase rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors">Ver Detalhes</button>
+              </div>
+            </div>
           </div>
         ))}
       </div>

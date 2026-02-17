@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { mockService } from '../services/mockService';
 import { parseVoiceCommand } from '../services/geminiService';
 import { GlucoseRecord, Periodo, Medicamento } from '../types';
@@ -8,10 +8,8 @@ const RecordsPage: React.FC = () => {
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState('');
+  const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [doseError, setDoseError] = useState('');
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
     periodo: Periodo.CAFE_MANHA,
     medicamento: Medicamento.NENHUM,
@@ -21,9 +19,7 @@ const RecordsPage: React.FC = () => {
     data: new Date().toISOString().split('T')[0]
   });
 
-  useEffect(() => {
-    loadRecords();
-  }, []);
+  useEffect(() => { loadRecords(); }, []);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -32,22 +28,8 @@ const RecordsPage: React.FC = () => {
     setLoading(false);
   };
 
-  const validateDose = (dose: string): boolean => {
-    if (!dose || dose === '0' || dose === 'N/A') return true;
-    // Regex for: numeric value followed by UI, mg, ml or co (tablets)
-    const pattern = /^\d+(\s?)(ui|mg|ml|co)$/i;
-    return pattern.test(dose.trim());
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDoseError('');
-
-    if (formData.dose && !validateDose(formData.dose)) {
-      setDoseError('Formato inválido. Use ex: 10ui, 500mg, 2ml ou 1co.');
-      return;
-    }
-
     if (editingId) {
       await mockService.updateRecord(editingId, formData);
     } else {
@@ -59,300 +41,307 @@ const RecordsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja remover este registro?')) {
+    if (window.confirm('Excluir este registro permanentemente?')) {
       await mockService.deleteRecord(id);
-      loadRecords();
+      await loadRecords();
     }
   };
 
-  const handleEdit = (rec: GlucoseRecord) => {
-    setFormData(rec);
-    setEditingId(rec.id);
-    setDoseError('');
-    setIsModalOpen(true);
-  };
-
-  const handleVoiceCommand = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Seu navegador não suporta reconhecimento de voz.');
+  const startVoiceCapture = async () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Seu navegador não suporta reconhecimento de voz.");
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new (window as any).webkitSpeechRecognition();
     recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    recognition.onstart = () => {
-      setIsVoiceActive(true);
-      setVoiceStatus('Ouvindo...');
-    };
-
+    recognition.onstart = () => setIsVoiceProcessing(true);
+    recognition.onend = () => setIsVoiceProcessing(false);
     recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
-      setVoiceStatus('Processando com IA...');
-      
       const parsed = await parseVoiceCommand(transcript);
-      setIsVoiceActive(false);
-      
       if (parsed) {
         setFormData(prev => ({
           ...prev,
           antesRefeicao: parsed.valor_glicemia || prev.antesRefeicao,
-          periodo: (parsed.periodo as any) || prev.periodo,
-          medicamento: (parsed.medicamento as any) || prev.medicamento,
+          periodo: (parsed.periodo as Periodo) || prev.periodo,
+          medicamento: (parsed.medicamento as Medicamento) || prev.medicamento,
           dose: parsed.dose || prev.dose,
-          notes: parsed.notes || `${prev.notes || ''} (Capturado por voz: "${transcript}")`.trim()
+          notes: parsed.notes || prev.notes
         }));
-        setIsModalOpen(true);
-        setDoseError('');
-      } else {
-        alert('Não consegui entender o comando. Tente algo como: "Glicemia de 120 no café da manhã com 10 unidades de basal"');
       }
     };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech Recognition Error', event.error);
-      setIsVoiceActive(false);
-      setVoiceStatus('');
-      if (event.error === 'not-allowed') {
-        alert('Permissão de microfone negada.');
-      }
-    };
-
-    recognition.onend = () => {
-      // Don't clear status here so user sees "Processando"
-    };
-
     recognition.start();
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        if (Array.isArray(json)) {
-          for (const item of json) {
-            await mockService.createRecord(item);
-          }
-          loadRecords();
-          alert('Dados importados com sucesso!');
-        }
-      } catch (err) {
-        alert('Erro ao importar arquivo JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const exportCSV = () => {
-    const headers = ['Data', 'Periodo', 'Medicamento', 'Glicemia', 'Dose', 'Notas'];
-    const rows = records.map(r => [r.data, r.periodo, r.medicamento, r.antesRefeicao, r.dose, r.notes]);
-    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "glicosim_registros.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black tracking-tighter uppercase italic">Histórico</h2>
-          <p className="text-gray-500 text-sm">Gerencie todas as suas medições.</p>
+    <div className="animate-fade-in relative min-h-full">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Registros</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seu histórico de medições glicêmicas.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
           <button 
-            onClick={handleVoiceCommand}
-            disabled={isVoiceActive}
-            className={`px-4 py-2 border font-bold text-xs uppercase transition-all flex items-center gap-2 ${isVoiceActive ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'bg-white dark:bg-[#111] border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            onClick={() => { setEditingId(null); setIsModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-700 transition-all active:scale-95"
           >
-            {isVoiceActive ? `🎙️ ${voiceStatus}` : '🎙️ Comando IA'}
-          </button>
-          <label className="px-4 py-2 bg-white dark:bg-[#111] border border-gray-300 dark:border-gray-700 font-bold text-xs uppercase cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-            📂 Importar
-            <input type="file" className="hidden" accept=".json" onChange={handleFileUpload} />
-          </label>
-          <button 
-            onClick={exportCSV}
-            className="px-4 py-2 bg-white dark:bg-[#111] border border-gray-300 dark:border-gray-700 font-bold text-xs uppercase hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
-          >
-            📊 Exportar
-          </button>
-          <button 
-            onClick={() => { 
-              setEditingId(null); 
-              setFormData({ 
-                periodo: Periodo.CAFE_MANHA,
-                medicamento: Medicamento.NENHUM,
-                antesRefeicao: 100,
-                dose: '0',
-                notes: '', 
-                data: new Date().toISOString().split('T')[0] 
-              }); 
-              setDoseError('');
-              setIsModalOpen(true); 
-            }}
-            className="px-6 py-2 bg-blue-600 text-white font-black text-xs uppercase hover:bg-blue-700 transition-all"
-          >
-            + Novo Registro
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Novo Registro
           </button>
         </div>
       </header>
 
-      <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">Data</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">Período</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">Glicemia</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">Medicamento</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500">Dose</th>
-              <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} className="p-8 text-center text-xs font-bold uppercase text-gray-500 italic">Buscando dados...</td></tr>
-            ) : records.length === 0 ? (
-              <tr><td colSpan={6} className="p-8 text-center text-xs font-bold uppercase text-gray-500 italic">Nenhum registro encontrado.</td></tr>
-            ) : records.map(rec => (
-              <tr key={rec.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                <td className="px-4 py-4 text-xs font-bold font-mono">{rec.data.split('-').reverse().join('/')}</td>
-                <td className="px-4 py-4 text-xs font-bold uppercase italic text-gray-400">{rec.periodo}</td>
-                <td className="px-4 py-4">
-                  <span className={`text-xl font-black italic ${rec.antesRefeicao > 100 ? 'text-red-500' : rec.antesRefeicao < 70 ? 'text-yellow-500' : 'text-blue-500'}`}>
-                    {rec.antesRefeicao}
-                  </span>
-                  <span className="text-[10px] text-gray-500 ml-1">mg/dL</span>
-                </td>
-                <td className="px-4 py-4 text-xs font-medium uppercase tracking-tighter">{rec.medicamento}</td>
-                <td className="px-4 py-4 text-xs font-medium font-mono">{rec.dose || '-'}</td>
-                <td className="px-4 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleEdit(rec)} className="p-2 hover:text-blue-500 transition-colors">✏️</button>
-                    <button onClick={() => handleDelete(rec.id)} className="p-2 hover:text-red-500 transition-colors">🗑️</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Grid de Cards para Mobile / Tabela para Desktop */}
+      <div className="grid grid-cols-1 md:block gap-4">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-medium text-slate-400">Carregando seus dados...</p>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="bg-slate-50 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center">
+             <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">history</span>
+             <p className="text-slate-500 font-medium text-sm">Nenhum registro encontrado.</p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="hidden md:table-header-group">
+                  <tr className="border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Data</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Período</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Valor</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Dose</th>
+                    <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {records.map(rec => (
+                    <tr key={rec.id} className="block md:table-row group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="block md:table-cell px-6 py-4 md:py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="md:hidden w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
+                             <span className="material-symbols-outlined text-[18px]">calendar_today</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              {rec.data.split('-').reverse().join('/')}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="block md:table-cell px-6 py-0 md:py-5">
+                        <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 uppercase">
+                          {rec.periodo}
+                        </span>
+                      </td>
+                      <td className="block md:table-cell px-6 py-4 md:py-5">
+                        <div className="flex items-baseline gap-1">
+                          <span className={`text-lg font-black ${rec.antesRefeicao > 140 ? 'text-orange-500' : 'text-orange-600'}`}>
+                            {rec.antesRefeicao}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">mg/dL</span>
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell px-6 py-4 md:py-5 text-sm font-medium text-slate-500">
+                        {rec.dose || '-'}
+                      </td>
+                      <td className="block md:table-cell px-6 py-4 md:py-5 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button 
+                            onClick={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }}
+                            className="p-2 hover:bg-orange-50 dark:hover:bg-orange-950/20 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">edit</span>
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(rec.id)}
+                            className="p-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal / Drawer UI */}
+      {/* Floating Action Button for Mobile */}
+      <button 
+        onClick={() => { setEditingId(null); setIsModalOpen(true); }}
+        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-orange-500/40 z-40 active:scale-90 transition-transform"
+      >
+        <span className="material-symbols-outlined text-3xl">add</span>
+      </button>
+
+      {/* MODAL / BOTTOM SHEET REFACTOR */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-end bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md h-full bg-white dark:bg-[#0a0a0a] border border-gray-800 shadow-2xl flex flex-col animate-slideRight">
-            <div className="p-6 border-b border-gray-800 flex justify-between items-center">
-              <h3 className="text-xl font-black uppercase italic tracking-tighter">
-                {editingId ? 'Editar Medição' : 'Novo Registro'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-2xl hover:opacity-50 transition-opacity">×</button>
-            </div>
-            
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Data</label>
-                  <input 
-                    type="date" 
-                    value={formData.data}
-                    onChange={e => setFormData({...formData, data: e.target.value})}
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 text-sm focus:border-blue-500 outline-none"
-                    required
-                  />
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-fade-in transition-all">
+          <div 
+            className="w-full max-w-lg bg-white dark:bg-[#09090b] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slide-up md:animate-zoom-in"
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined">{editingId ? 'edit_note' : 'add_circle'}</span>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Valor (mg/dL)</label>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-none">
+                    {editingId ? 'Editar Medição' : 'Novo Registro'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">Glicemia</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <form onSubmit={handleSave} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              
+              {/* Voice Assist Button */}
+              <button
+                type="button"
+                onClick={startVoiceCapture}
+                className={`w-full flex items-center justify-center gap-3 py-3 rounded-2xl border-2 border-dashed transition-all ${
+                  isVoiceProcessing 
+                  ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-500 text-orange-600 animate-pulse' 
+                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-orange-200 hover:bg-orange-50/30'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">{isVoiceProcessing ? 'hearing' : 'mic'}</span>
+                <span className="text-sm font-bold">{isVoiceProcessing ? 'Processando voz...' : 'Preencher via comando de voz'}</span>
+              </button>
+
+              {/* Big Glicemy Input */}
+              <div className="flex flex-col items-center justify-center py-4 bg-orange-50/30 dark:bg-orange-950/10 rounded-3xl border border-orange-100/50 dark:border-orange-900/20">
+                <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-2">Valor da Glicemia</span>
+                <div className="flex items-center gap-3">
                   <input 
                     type="number" 
-                    value={formData.antesRefeicao}
+                    value={formData.antesRefeicao} 
                     onChange={e => setFormData({...formData, antesRefeicao: Number(e.target.value)})}
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 text-xl font-black focus:border-blue-500 outline-none"
-                    required
+                    className="w-32 text-center text-6xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white"
+                    required 
+                    autoFocus
                   />
+                  <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">mg/dL</span>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Período</label>
-                <select 
-                  value={formData.periodo}
-                  onChange={e => setFormData({...formData, periodo: e.target.value as Periodo})}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 text-sm focus:border-blue-500 outline-none"
-                >
-                  {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+              {/* Main Fields Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">event</span> Data
+                  </label>
+                  <input 
+                    type="date" 
+                    value={formData.data} 
+                    onChange={e => setFormData({...formData, data: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">schedule</span> Período
+                  </label>
+                  <select 
+                    value={formData.periodo} 
+                    onChange={e => setFormData({...formData, periodo: e.target.value as Periodo})}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none"
+                  >
+                    {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Medicamento</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">medication</span> Medicação
+                  </label>
                   <select 
-                    value={formData.medicamento}
+                    value={formData.medicamento} 
                     onChange={e => setFormData({...formData, medicamento: e.target.value as Medicamento})}
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 text-sm focus:border-blue-500 outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none"
                   >
                     {Object.values(Medicamento).map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Dose (UI, mg, ml, co)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">vaccines</span> Dose
+                  </label>
                   <input 
                     type="text" 
-                    placeholder="ex: 10ui, 500mg, 2ml"
-                    value={formData.dose}
-                    onChange={e => {
-                      setFormData({...formData, dose: e.target.value});
-                      setDoseError('');
-                    }}
-                    className={`w-full bg-gray-50 dark:bg-gray-900 border p-3 text-sm outline-none transition-colors ${doseError ? 'border-red-500' : 'border-gray-200 dark:border-gray-800 focus:border-blue-500'}`}
+                    placeholder="ex: 10ui"
+                    value={formData.dose} 
+                    onChange={e => setFormData({...formData, dose: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
                   />
-                  {doseError && <p className="text-[10px] font-bold text-red-500 uppercase">{doseError}</p>}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Notas Adicionais</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">notes</span> Notas Adicionais
+                </label>
                 <textarea 
-                  rows={3}
-                  value={formData.notes}
+                  rows={2} 
+                  placeholder="Sentindo-se bem..."
+                  value={formData.notes} 
                   onChange={e => setFormData({...formData, notes: e.target.value})}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 text-sm focus:border-blue-500 outline-none resize-none"
-                  placeholder="Como você está se sentindo?"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all resize-none"
                 />
               </div>
 
-              <div className="pt-4 flex gap-3">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-4 border border-gray-200 dark:border-gray-800 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                  className="flex-1 py-3.5 px-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                 >
-                  CANCELAR
+                  Cancelar
                 </button>
                 <button 
-                  type="submit"
-                  className="flex-1 py-4 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+                  type="submit" 
+                  className="flex-[2] py-3.5 px-4 bg-orange-600 text-white font-bold text-sm rounded-2xl hover:bg-orange-700 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
                 >
-                  {editingId ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR REGISTRO'}
+                  Salvar Registro
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Adding custom animations to tailwind via style tag in case they aren't global */}
+      <style>{`
+        @keyframes slide-up {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes zoom-in {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
+        .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
+      `}</style>
     </div>
   );
 };
