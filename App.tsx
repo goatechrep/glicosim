@@ -169,7 +169,7 @@ const App: React.FC = () => {
                         </NavLink>
                       </div>
 
-                      <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar">
+                      <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar relative">
                         <Routes>
                           <Route path="/" element={<DashboardPage />} />
                           <Route path="/registros" element={<RecordsPage />} />
@@ -179,27 +179,30 @@ const App: React.FC = () => {
                         </Routes>
                       </main>
 
-                      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white/95 dark:bg-[#111121]/95 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between px-2 z-50 pb-2">
-                        <div className="flex w-1/2 justify-around">
+                      {/* Fixed Mobile Bottom Navigation */}
+                      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-6 pb-2">
+                        <div className="flex w-[40%] justify-around">
                           <MobileNavItem to="/" icon="home" label="Início" />
                           <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
                         </div>
 
-                        {/* Floating Center Button */}
-                        <div className="relative h-full flex items-center px-4">
+                        {/* Center Floating Action Button (FAB) */}
+                        <div className="relative w-[20%] flex justify-center">
                           <Link 
                             to="/registros?new=true"
-                            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_12px_24px_rgba(234,88,12,0.4)] active:scale-90 active:bg-orange-700 transition-all border-4 border-white dark:border-[#111121]"
+                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(234,88,12,0.4)] border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100]"
                           >
                             <span className="material-symbols-outlined text-3xl font-bold">add</span>
                           </Link>
                         </div>
 
-                        <div className="flex w-1/2 justify-around">
+                        <div className="flex w-[40%] justify-around">
                           <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />
                           <MobileNavItem to="/ajustes" icon="settings" label="Ajustes" />
                         </div>
                       </nav>
+                      {/* Safe Area Spacer for Mobile Menu */}
+                      <div className="md:hidden h-20 w-full shrink-0"></div>
                     </div>
                   </div>
                 </PrivateRoute>
@@ -227,11 +230,11 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink 
     to={to} 
     className={({ isActive }) => 
-      `flex flex-col items-center gap-1.5 transition-all px-3 py-2 rounded-2xl ${isActive ? 'text-orange-600' : 'text-slate-400'}`
+      `flex flex-col items-center gap-1 transition-all ${isActive ? 'text-orange-600' : 'text-slate-400'}`
     }
   >
     <span className="material-symbols-outlined text-[24px]">{icon}</span>
-    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+    <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
   </NavLink>
 );
 

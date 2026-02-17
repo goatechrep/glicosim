@@ -37,11 +37,11 @@ const DashboardPage: React.FC = () => {
   }));
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in pb-20">
+    <div className="flex flex-col gap-8 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="animate-slide-up-subtle">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">OLÁ, {user?.nome?.toUpperCase() || 'USUÁRIO'}</h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Status atualizado do seu controle glicêmico.</p>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Olá, {user?.nome?.split(' ')[0] || 'Usuário'}</h2>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
         </div>
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20 shadow-sm">
            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -49,20 +49,17 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 140 ? 'Alta' : 'Estável'} />
         <Card title="No Alvo" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average-140)/2 : 0)))}%`} unit="ideal" icon="check_circle" color="text-emerald-500" />
         <Card title="Última" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
         <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500" />
       </div>
 
-      <div className="grid gap-8 md:grid-cols-12">
+      <div className="grid gap-8 md:grid-cols-12 pb-24 md:pb-0">
         <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Tendência Semanal</h3>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 bg-orange-50 dark:bg-orange-950/30 text-orange-600 rounded-lg text-[10px] font-bold uppercase">7 dias</button>
-            </div>
           </div>
           <div className="p-6 h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -89,19 +86,19 @@ const DashboardPage: React.FC = () => {
 
         <div className="md:col-span-4 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Últimas Atividades</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Atividades Recentes</h3>
           </div>
           <div className="p-8 flex-1">
-            <div className="space-y-8">
+            <div className="space-y-6">
               {records.slice(0, 5).map(record => (
                 <div key={record.id} className="flex items-center justify-between group">
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/20 transition-all shadow-sm">
+                    <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all shadow-sm">
                        <span className="material-symbols-outlined text-[22px]">water_drop</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{record.periodo}</span>
-                      <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{record.data.split('-').reverse().slice(0,2).join('/')}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{record.data.split('-').reverse().slice(0,2).join('/')}</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -128,22 +125,22 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ title, value, unit, icon, color = "text-slate-900 dark:text-white", trend }) => (
-  <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] p-7 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group">
-    <div className="flex items-center justify-between mb-8">
-      <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[1.25rem] flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all shadow-sm">
-        <span className="material-symbols-outlined text-[24px]">{icon}</span>
+  <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] p-6 shadow-sm hover:shadow-xl transition-all group">
+    <div className="flex items-center justify-between mb-6">
+      <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
+        <span className="material-symbols-outlined text-[20px]">{icon}</span>
       </div>
       {trend && (
-        <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+        <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-lg text-[9px] font-black uppercase">
           {trend}
         </span>
       )}
     </div>
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{title}</p>
-      <div className="flex items-baseline gap-2">
-        <span className={`text-4xl font-black tracking-tighter ${color}`}>{value}</span>
-        <span className="text-[11px] text-slate-400 font-black uppercase tracking-widest">{unit}</span>
+    <div className="space-y-1">
+      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{title}</p>
+      <div className="flex items-baseline gap-1">
+        <span className={`text-3xl font-black tracking-tighter ${color}`}>{value}</span>
+        <span className="text-[10px] text-slate-400 font-black uppercase">{unit}</span>
       </div>
     </div>
   </div>

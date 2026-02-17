@@ -22,7 +22,6 @@ const RecordsPage: React.FC = () => {
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Filtros
@@ -44,13 +43,21 @@ const RecordsPage: React.FC = () => {
     data: new Date().toISOString().split('T')[0]
   });
 
-  // Gatilho para abrir modal se vier do botão flutuante central
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('new') === 'true') {
       setEditingId(null);
+      setFormData({
+        periodo: Periodo.CAFE_MANHA,
+        medicamento: Medicamento.NENHUM,
+        antesRefeicao: 100,
+        dose: '0',
+        notes: '',
+        data: new Date().toISOString().split('T')[0]
+      });
+      setDoseValue('0');
+      setDoseUnit('UI');
       setIsModalOpen(true);
-      // Limpa a query após abrir
       navigate('/registros', { replace: true });
     }
   }, [location.search, navigate]);
@@ -69,7 +76,7 @@ const RecordsPage: React.FC = () => {
     setToasts(prev => [...prev, { message, type, id }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    }, 2500);
   };
 
   const filteredRecords = useMemo(() => {
@@ -80,50 +87,6 @@ const RecordsPage: React.FC = () => {
       return matchPeriodo && matchDateStart && matchDateEnd;
     });
   }, [records, filterPeriodo, filterDateStart, filterDateEnd]);
-
-  const exportToCSV = () => {
-    if (filteredRecords.length === 0) {
-      addToast("Nenhum dado para exportar", "error");
-      return;
-    }
-    const headers = ["Data", "Periodo", "Glicemia (mg/dL)", "Medicamento", "Dose", "Notas"];
-    const rows = filteredRecords.map(r => [
-      r.data,
-      r.periodo,
-      r.antesRefeicao,
-      r.medicamento,
-      r.dose,
-      r.notes.replace(/,/g, ';')
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers, ...rows].map(e => e.join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `glicosim_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    addToast("Exportação concluída!");
-  };
-
-  const parseDoseString = (doseStr: string) => {
-    const match = doseStr.match(/^(\d+[\.,]?\d*)\s*(UI|mg|ml|ui|UI)?$/i);
-    if (match) {
-      return { value: match[1], unit: (match[2] || 'UI').toUpperCase() };
-    }
-    return { value: doseStr || '0', unit: 'UI' };
-  };
-
-  const validateDose = (val: string, unit: string) => {
-    const num = parseFloat(val.replace(',', '.'));
-    if (isNaN(num) || num < 0) return "Valor inválido";
-    if (unit === 'UI' && num > 200) return "Dose alta";
-    if (unit === 'mg' && num > 5000) return "Dose alta";
-    return null;
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +106,7 @@ const RecordsPage: React.FC = () => {
       }
       setIsModalOpen(false);
       setEditingId(null);
-      loadRecords();
+      await loadRecords();
     } catch (err) {
       addToast("Erro ao salvar", "error");
     }
@@ -156,12 +119,32 @@ const RecordsPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (recordToDelete) {
-      await mockService.deleteRecord(recordToDelete);
-      addToast("Registro removido", "info");
-      setRecordToDelete(null);
-      setIsDeleteModalOpen(false);
-      loadRecords();
+      try {
+        await mockService.deleteRecord(recordToDelete);
+        addToast("Registro removido com sucesso!", "success");
+        setRecordToDelete(null);
+        setIsDeleteModalOpen(false);
+        await loadRecords(); // Garantir que a lista recarregue
+      } catch (error) {
+        addToast("Erro ao excluir registro.", "error");
+      }
     }
+  };
+
+  const validateDose = (val: string, unit: string) => {
+    const num = parseFloat(val.replace(',', '.'));
+    if (isNaN(num) || num < 0) return "Valor inválido";
+    if (unit === 'UI' && num > 200) return "Dose alta";
+    if (unit === 'mg' && num > 5000) return "Dose alta";
+    return null;
+  };
+
+  const parseDoseString = (doseStr: string) => {
+    const match = doseStr.match(/^(\d+[\.,]?\d*)\s*(UI|mg|ml|ui|UI)?$/i);
+    if (match) {
+      return { value: match[1], unit: (match[2] || 'UI').toUpperCase() };
+    }
+    return { value: doseStr || '0', unit: 'UI' };
   };
 
   const startVoiceCapture = async () => {
@@ -206,18 +189,23 @@ const RecordsPage: React.FC = () => {
 
   return (
     <div className="animate-fade-in relative min-h-full space-y-8">
-      {/* Toast System */}
-      <div className="fixed top-6 right-6 z-[11000] flex flex-col gap-3 pointer-events-none">
+      
+      {/* Toast Backdrop: Obscure everything else */}
+      {toasts.length > 0 && (
+        <div className="fixed inset-0 z-[10999] bg-slate-950/60 backdrop-blur-md animate-fade-in transition-all" />
+      )}
+      
+      <div className="fixed inset-0 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-4">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border animate-slide-in-right ${
+          <div key={t.id} className={`pointer-events-auto flex items-center gap-4 px-10 py-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border animate-toast-in ${
             t.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 
             t.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 
-            'bg-slate-800 border-slate-700 text-white'
+            'bg-slate-900 border-slate-700 text-white'
           }`}>
-            <span className="material-symbols-outlined text-lg">
+            <span className="material-symbols-outlined text-3xl">
               {t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}
             </span>
-            <span className="text-xs font-black uppercase tracking-widest">{t.message}</span>
+            <span className="text-lg font-black uppercase tracking-widest">{t.message}</span>
           </div>
         ))}
       </div>
@@ -225,34 +213,18 @@ const RecordsPage: React.FC = () => {
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Registros</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Acompanhe e filtre sua evolução glicêmica.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button 
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[20px]">download</span>
-            CSV
-          </button>
-          <button 
-            onClick={() => { setEditingId(null); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-700 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Novo Registro
-          </button>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Acompanhe sua evolução glicêmica sem itálicos.</p>
         </div>
       </header>
 
-      {/* FILTROS SECTION */}
+      {/* FILTROS */}
       <div className="bg-white dark:bg-[#111121] p-6 rounded-4xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-6 items-end">
         <div className="flex-1 min-w-[200px] space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Momento</label>
           <select 
             value={filterPeriodo}
             onChange={e => setFilterPeriodo(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 text-xs font-bold outline-none focus:ring-4 focus:ring-orange-500/10 appearance-none dark:text-white"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 text-xs font-bold outline-none appearance-none dark:text-white"
           >
             <option value="Todos">Todos os Períodos</option>
             {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
@@ -276,17 +248,9 @@ const RecordsPage: React.FC = () => {
             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 text-xs font-bold outline-none dark:text-white"
           />
         </div>
-        {(filterPeriodo !== 'Todos' || filterDateStart || filterDateEnd) && (
-          <button 
-            onClick={() => { setFilterPeriodo('Todos'); setFilterDateStart(''); setFilterDateEnd(''); }}
-            className="h-[46px] px-6 text-orange-600 font-black text-[10px] uppercase tracking-widest hover:underline"
-          >
-            Limpar
-          </button>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 md:block gap-4">
+      <div className="grid grid-cols-1 md:block gap-4 pb-24 md:pb-0">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -301,7 +265,7 @@ const RecordsPage: React.FC = () => {
           <div className="bg-white dark:bg-[#111121] rounded-4xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead className="hidden md:table-header-group">
+                <thead className="hidden md:table-header-group bg-slate-50 dark:bg-slate-900/50">
                   <tr className="border-b border-slate-100 dark:border-slate-800">
                     <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>
                     <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Período</th>
@@ -313,10 +277,8 @@ const RecordsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredRecords.map(rec => (
                     <tr key={rec.id} className="block md:table-row group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="block md:table-cell px-8 py-5">
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                          {rec.data.split('-').reverse().join('/')}
-                        </span>
+                      <td className="block md:table-cell px-8 py-5 text-sm font-bold text-slate-700 dark:text-slate-300">
+                        {rec.data.split('-').reverse().join('/')}
                       </td>
                       <td className="block md:table-cell px-8 py-0 md:py-5">
                         <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[10px] font-black text-orange-600 uppercase tracking-tighter">
@@ -338,13 +300,13 @@ const RecordsPage: React.FC = () => {
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }}
-                            className="w-9 h-9 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-400 hover:text-orange-600 rounded-xl transition-all"
+                            className="w-10 h-10 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-400 hover:text-orange-600 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-[20px]">edit</span>
                           </button>
                           <button 
                             onClick={() => openDeleteModal(rec.id)}
-                            className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all"
+                            className="w-10 h-10 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
@@ -359,7 +321,34 @@ const RecordsPage: React.FC = () => {
         )}
       </div>
 
-      {/* FORM MODAL */}
+      {/* DELETE CONFIRMATION MODAL */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/90 backdrop-blur-xl animate-fade-in p-6">
+          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[3rem] shadow-2xl p-12 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
+            <div className="w-24 h-24 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+              <span className="material-symbols-outlined text-5xl">warning</span>
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirmar Exclusão?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed">Este registro será removido permanentemente.</p>
+            <div className="flex flex-col gap-3 mt-10">
+              <button 
+                onClick={handleConfirmDelete} 
+                className="w-full py-5 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-red-500/30 active:scale-95 transition-all"
+              >
+                Confirmar Exclusão
+              </button>
+              <button 
+                onClick={() => { setIsDeleteModalOpen(false); setRecordToDelete(null); }} 
+                className="w-full py-5 bg-slate-50 dark:bg-slate-900 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FORM MODAL (Reuse existing structure with small polish) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in transition-all p-4">
           <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-t-4xl md:rounded-4xl shadow-2xl overflow-hidden animate-slide-up md:animate-zoom-in border border-slate-100 dark:border-slate-800">
@@ -403,34 +392,6 @@ const RecordsPage: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Medicamento</label>
-                  <select value={formData.medicamento} onChange={e => setFormData({...formData, medicamento: e.target.value as Medicamento})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none appearance-none dark:text-white">
-                    {Object.values(Medicamento).map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
-                    <span>Dose</span>
-                    {doseError && <span className="text-red-500 lowercase font-bold">{doseError}</span>}
-                  </label>
-                  <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                    <input type="number" step="any" value={doseValue} onChange={e => {setDoseValue(e.target.value); setDoseError(null);}} className="flex-1 min-w-0 bg-transparent px-5 py-4 text-sm font-bold outline-none dark:text-white" />
-                    <div className="flex p-1.5 gap-1 bg-slate-100 dark:bg-slate-800/50">
-                      {['UI', 'mg', 'ml'].map(unit => (
-                        <button key={unit} type="button" onClick={() => setDoseUnit(unit)} className={`px-3 py-1 rounded-xl text-[10px] font-black transition-all ${doseUnit === unit ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400'}`}>
-                          {unit}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Notas</label>
-                <textarea rows={3} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl px-6 py-4 text-sm font-medium outline-none resize-none dark:text-white" />
-              </div>
               <div className="flex gap-4 pt-4 pb-12 md:pb-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl">Descartar</button>
                 <button type="submit" className="flex-[2] py-4 px-6 bg-orange-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-orange-500/30">Salvar Registro</button>
@@ -440,29 +401,12 @@ const RecordsPage: React.FC = () => {
         </div>
       )}
 
-      {/* DELETE MODAL */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/90 backdrop-blur-lg animate-fade-in p-6">
-          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[2.5rem] shadow-2xl p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
-            <div className="w-24 h-24 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-bounce">
-              <span className="material-symbols-outlined text-5xl">warning</span>
-            </div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Excluir?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed">Esta ação removerá permanentemente o registro.</p>
-            <div className="flex flex-col gap-3 mt-10">
-              <button onClick={handleConfirmDelete} className="w-full py-5 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-red-500/30 active:scale-95">Confirmar Exclusão</button>
-              <button onClick={() => { setIsDeleteModalOpen(false); setRecordToDelete(null); }} className="w-full py-5 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl">Manter Registro</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style>{`
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
+        @keyframes toast-in {
+          0% { opacity: 0; transform: scale(0.6) translateY(100px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .animate-slide-in-right { animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .animate-toast-in { animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1.4) forwards; }
         @keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes zoom-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
