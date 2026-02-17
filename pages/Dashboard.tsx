@@ -1,15 +1,17 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { mockService } from '../services/mockService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
+import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');
 
   const loadData = useCallback(async () => {
     const s = await mockService.getDashboardStats();
@@ -25,16 +27,41 @@ const DashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [loadData]);
 
+  const periodOptions = useMemo(() => [
+    { value: '7d' as const, label: '7 dias', days: 7 },
+    { value: '30d' as const, label: '30 dias', days: 30 },
+    { value: '90d' as const, label: '3 meses', days: 90 },
+  ], []);
+
+  const chartData = useMemo(() => {
+    const days = periodOptions.find(p => p.value === period)?.days || 7;
+    return [...records]
+      .reverse()
+      .slice(-days)
+      .map(r => ({
+        name: r.data.split('-')[2],
+        val: r.antesRefeicao,
+      }));
+  }, [records, period, periodOptions]);
+
   if (loading) return (
-    <div className="flex h-full items-center justify-center">
-      <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex flex-col gap-8">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+      <div className="grid gap-8 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <SkeletonChart />
+        </div>
+        <div className="md:col-span-4">
+          <SkeletonChart />
+        </div>
+      </div>
     </div>
   );
-
-  const chartData = [...records].reverse().slice(-7).map(r => ({
-    name: r.data.split('-')[2],
-    val: r.antesRefeicao,
-  }));
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
@@ -49,19 +76,41 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 stagger-children">
         <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 140 ? 'Alta' : 'Estável'} />
-        <Card title="No Alvo" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average-140)/2 : 0)))}%`} unit="ideal" icon="check_circle" color="text-emerald-500" />
+        <Card title="No Alvo" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average-140)/2 : 0)))}%`} unit="ideal" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
         <Card title="Última" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
-        <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500" />
+        <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500 dark:text-orange-400" />
       </div>
 
       <div className="grid gap-8 md:grid-cols-12 pb-24 md:pb-0">
         <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm overflow-hidden flex flex-col">
-          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Tendência Semanal</h3>
+          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência de Glicemia</h3>
+            
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl">
+              {periodOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setPeriod(option.value)}
+                  className={`
+                    px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg
+                    transition-all duration-200
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-1
+                    ${period === option.value
+                      ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }
+                  `}
+                  aria-label={`Mostrar dados de ${option.label}`}
+                  aria-pressed={period === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="p-6 h-[340px]">
+          <div className="p-6 h-[340px] md:h-[360px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -70,15 +119,52 @@ const DashboardPage: React.FC = () => {
                     <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" opacity={0.3} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} />
-                <Tooltip 
-                  contentStyle={{backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', padding: '16px'}} 
-                  itemStyle={{fontSize: '14px', fontWeight: '900', color: '#f97316'}}
-                  labelStyle={{fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold'}}
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#cbd5e1" opacity={0.3} className="dark:opacity-10" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 11, fontWeight: 700, fill: '#94a3b8'}} 
+                  dy={12} 
                 />
-                <Area type="monotone" dataKey="val" stroke="#f97316" strokeWidth={5} fillOpacity={1} fill="url(#orangeGrad)" dot={{fill: '#f97316', r: 6, strokeWidth: 3, stroke: '#fff'}} activeDot={{ r: 10, strokeWidth: 0 }} />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 11, fontWeight: 700, fill: '#94a3b8'}}
+                  domain={[0, 300]}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.98)', 
+                    borderRadius: '16px', 
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)', 
+                    padding: '12px 16px'
+                  }} 
+                  itemStyle={{fontSize: '14px', fontWeight: '700', color: '#f97316'}}
+                  labelStyle={{
+                    fontSize: '10px', 
+                    color: '#64748b', 
+                    textTransform: 'uppercase', 
+                    marginBottom: '6px', 
+                    fontWeight: '800',
+                    letterSpacing: '0.1em'
+                  }}
+                  formatter={(value: number) => {
+                    const status = value > 180 ? '⚠️ Muito Alta' : value > 140 ? '⚡ Alta' : value < 70 ? '❄️ Baixa' : '✅ Normal';
+                    return [`${value} mg/dL`, status];
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="val" 
+                  stroke="#f97316" 
+                  strokeWidth={4} 
+                  fillOpacity={1} 
+                  fill="url(#orangeGrad)" 
+                  dot={{fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff'}} 
+                  activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }} 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -86,7 +172,7 @@ const DashboardPage: React.FC = () => {
 
         <div className="md:col-span-4 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Atividades Recentes</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
           </div>
           <div className="p-8 flex-1">
             <div className="space-y-6">
@@ -124,26 +210,74 @@ interface CardProps {
   trend?: string;
 }
 
-const Card: React.FC<CardProps> = ({ title, value, unit, icon, color = "text-slate-900 dark:text-white", trend }) => (
-  <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] p-6 shadow-sm hover:shadow-xl transition-all group">
-    <div className="flex items-center justify-between mb-6">
-      <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
-        <span className="material-symbols-outlined text-[20px]">{icon}</span>
+const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-900 dark:text-white", trend }) => (
+  <div className="
+    group relative
+    rounded-3xl border border-slate-200 dark:border-slate-800/80 
+    bg-white dark:bg-[#111121] 
+    p-7 
+    shadow-sm hover:shadow-2xl hover:shadow-orange-500/10
+    transition-all duration-300 ease-out
+    hover:-translate-y-1
+  ">
+    {/* Borda animada no hover */}
+    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-orange-500/0 to-orange-500/0 group-hover:from-orange-500/5 group-hover:to-orange-500/10 transition-all duration-500 pointer-events-none" />
+    
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-6">
+        <div className="
+          w-12 h-12 
+          bg-gradient-to-br from-slate-50 to-slate-100 
+          dark:from-slate-900 dark:to-slate-800
+          border border-slate-200 dark:border-slate-700
+          rounded-2xl 
+          flex items-center justify-center 
+          text-slate-400 
+          group-hover:text-orange-600 
+          group-hover:scale-110
+          group-hover:rotate-3
+          transition-all duration-300
+          shadow-sm
+        ">
+          <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{icon}</span>
+        </div>
+        {trend && (
+          <span className="
+            px-3 py-1.5 
+            bg-emerald-50 dark:bg-emerald-900/10 
+            text-emerald-600 dark:text-emerald-400
+            border border-emerald-200 dark:border-emerald-800
+            rounded-lg 
+            text-[9px] font-black uppercase tracking-wider
+            shadow-sm
+          ">
+            {trend}
+          </span>
+        )}
       </div>
-      {trend && (
-        <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-lg text-[9px] font-black uppercase">
-          {trend}
-        </span>
-      )}
-    </div>
-    <div className="space-y-1">
-      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{title}</p>
-      <div className="flex items-baseline gap-1">
-        <span className={`text-3xl font-black tracking-tighter ${color}`}>{value}</span>
-        <span className="text-[10px] text-slate-400 font-black uppercase">{unit}</span>
+      
+      <div className="space-y-2">
+        <p className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.15em]">
+          {title}
+        </p>
+        <div className="flex items-baseline gap-2">
+          <span className={`text-4xl font-black tracking-tighter ${color}`}>
+            {value}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">
+            {unit}
+          </span>
+        </div>
       </div>
     </div>
   </div>
-);
+), (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.trend === nextProps.trend
+  );
+});
+
+Card.displayName = 'Card';
 
 export default DashboardPage;

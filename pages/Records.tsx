@@ -5,6 +5,10 @@ import { mockService } from '../services/mockService';
 import { parseVoiceCommand } from '../services/geminiService';
 import { GlucoseRecord, Periodo, Medicamento } from '../types';
 import { useAuth } from '../App';
+import RecordCard from '../components/RecordCard';
+import FilterDrawer from '../components/FilterDrawer';
+import useDebounce from '../hooks/useDebounce';
+import Button from '../components/Button';
 
 interface Toast {
   message: string;
@@ -28,6 +32,9 @@ const RecordsPage: React.FC = () => {
   const [filterPeriodo, setFilterPeriodo] = useState<string>('Todos');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const [doseValue, setDoseValue] = useState<string>('0');
   const [doseUnit, setDoseUnit] = useState<string>('UI');
@@ -83,9 +90,12 @@ const RecordsPage: React.FC = () => {
       const matchPeriodo = filterPeriodo === 'Todos' || rec.periodo === filterPeriodo;
       const matchDateStart = !filterDateStart || rec.data >= filterDateStart;
       const matchDateEnd = !filterDateEnd || rec.data <= filterDateEnd;
-      return matchPeriodo && matchDateStart && matchDateEnd;
+      const matchSearch = !debouncedSearch || 
+        rec.notes?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        rec.periodo.toLowerCase().includes(debouncedSearch.toLowerCase());
+      return matchPeriodo && matchDateStart && matchDateEnd && matchSearch;
     });
-  }, [records, filterPeriodo, filterDateStart, filterDateEnd]);
+  }, [records, filterPeriodo, filterDateStart, filterDateEnd, debouncedSearch]);
 
   // Funcionalidade de Exportação CSV
   const exportToCSV = () => {
@@ -335,23 +345,86 @@ const RecordsPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="bg-white dark:bg-[#111121] p-5 rounded-4xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 items-end">
+      {/* Mobile: Filter Button */}
+      <div className="md:hidden space-y-3">
+        <Button
+          variant="secondary"
+          size="md"
+          onClick={() => setShowFilterDrawer(true)}
+          leftIcon={<span className="material-symbols-outlined text-[20px]">filter_list</span>}
+          className="w-full"
+        >
+          Filtrar Registros
+        </Button>
+        
+        {/* Search input */}
+        <input
+          type="search"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar nos registros..."
+          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500 dark:text-white"
+          aria-label="Buscar registros"
+        />
+      </div>
+
+      {/* Desktop: Inline Filters */}
+      <div className="hidden md:flex bg-white dark:bg-[#111121] p-5 rounded-4xl border border-slate-200 dark:border-slate-800 flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[180px] space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Momento</label>
-          <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none appearance-none dark:text-white">
+          <label htmlFor="filter-periodo" className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest ml-1">Momento</label>
+          <select 
+            id="filter-periodo"
+            value={filterPeriodo} 
+            onChange={e => setFilterPeriodo(e.target.value)} 
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none appearance-none dark:text-white focus:ring-2 focus:ring-orange-500"
+          >
             <option value="Todos">Todos os Períodos</option>
             {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="flex-1 min-w-[140px] space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">De</label>
-          <input type="date" value={filterDateStart} onChange={e => setFilterDateStart(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none dark:text-white" />
+          <label htmlFor="filter-date-start-desktop" className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest ml-1">De</label>
+          <input 
+            id="filter-date-start-desktop"
+            type="date" 
+            value={filterDateStart} 
+            onChange={e => setFilterDateStart(e.target.value)} 
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500" 
+          />
         </div>
         <div className="flex-1 min-w-[140px] space-y-1.5">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Até</label>
-          <input type="date" value={filterDateEnd} onChange={e => setFilterDateEnd(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none dark:text-white" />
+          <label htmlFor="filter-date-end-desktop" className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest ml-1">Até</label>
+          <input 
+            id="filter-date-end-desktop"
+            type="date" 
+            value={filterDateEnd} 
+            onChange={e => setFilterDateEnd(e.target.value)} 
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500" 
+          />
+        </div>
+        <div className="flex-1 min-w-[200px] space-y-1.5">
+          <label htmlFor="search-desktop" className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest ml-1">Buscar</label>
+          <input
+            id="search-desktop"
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar..."
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500"
+          />
         </div>
       </div>
+
+      <FilterDrawer
+        isOpen={showFilterDrawer}
+        onClose={() => setShowFilterDrawer(false)}
+        filters={{ periodo: filterPeriodo, dateStart: filterDateStart, dateEnd: filterDateEnd }}
+        onApply={(filters) => {
+          setFilterPeriodo(filters.periodo);
+          setFilterDateStart(filters.dateStart);
+          setFilterDateEnd(filters.dateEnd);
+        }}
+      />
 
       <div className="pb-24">
         {loading ? (
@@ -364,30 +437,52 @@ const RecordsPage: React.FC = () => {
              <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Sem registros encontrados.</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#111121] rounded-4xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead className="hidden md:table-header-group bg-slate-50 dark:bg-slate-900/50">
-                <tr className="border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredRecords.map(rec => (
-                  <tr key={rec.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">{rec.data.split('-').reverse().join('/')}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[9px] font-black text-orange-600 uppercase">{rec.periodo}</span>
-                    </td>
-                    <td className="px-6 py-4 font-black text-orange-600">{rec.antesRefeicao} <span className="text-[9px] text-slate-400 ml-1">mg/dL</span></td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }} className="w-9 h-9 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-400 hover:text-orange-600 rounded-xl transition-all">
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
-                        </button>
-                        <button onClick={() => openDeleteModal(rec.id)} className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all">
+          <>
+            {/* Mobile: Cards */}
+            <div className="md:hidden space-y-3">
+              {filteredRecords.map(rec => (
+                <RecordCard
+                  key={rec.id}
+                  record={rec}
+                  onEdit={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }}
+                  onDelete={() => openDeleteModal(rec.id)}
+                />
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="hidden md:block bg-white dark:bg-[#111121] rounded-4xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-900/50">
+                  <tr className="border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Data</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Período</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Valor</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredRecords.map(rec => (
+                    <tr key={rec.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">{rec.data.split('-').reverse().join('/')}</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase">{rec.periodo}</span>
+                      </td>
+                      <td className="px-6 py-4 font-black text-orange-600 dark:text-orange-400">{rec.antesRefeicao} <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span></td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button 
+                            onClick={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }} 
+                            className="w-9 h-9 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-400 hover:text-orange-600 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            aria-label={`Editar registro de ${rec.data}`}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                          <button 
+                            onClick={() => openDeleteModal(rec.id)} 
+                            className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            aria-label={`Excluir registro de ${rec.data}`}
+                          >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </button>
                       </div>
@@ -397,6 +492,7 @@ const RecordsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

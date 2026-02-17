@@ -32,21 +32,23 @@ const Sidebar: React.FC = () => {
       </div>
 
       <div className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-2">
-        <p className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-6">Menu de Controle</p>
-        <nav className="space-y-2">
+        <p className="px-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.25em] mb-6">Menu de Controle</p>
+        <nav className="space-y-2" aria-label="Menu principal">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 ${
+                `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                   isActive
                     ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm active'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
                 }`
               }
+              aria-current={item.path === '/' ? 'page' : undefined}
             >
-              <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+              <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
@@ -67,9 +69,10 @@ const Sidebar: React.FC = () => {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+            aria-label="Sair da aplicação"
           >
-            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
             Sair do App
           </button>
         </div>

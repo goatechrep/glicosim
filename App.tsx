@@ -1,19 +1,36 @@
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, NavLink, Link } from 'react-router-dom';
 import { UserProfile } from './types';
 import { mockService } from './services/mockService';
 
-// Pages
-import LoginPage from './pages/Login';
-import OnboardingPage from './pages/Onboarding';
-import DashboardPage from './pages/Dashboard';
-import RecordsPage from './pages/Records';
-import SettingsPage from './pages/Settings';
-import AlertsPage from './pages/Alerts';
+// Lazy load pages for better performance
+const LoginPage = lazy(() => import('./pages/Login'));
+const OnboardingPage = lazy(() => import('./pages/Onboarding'));
+const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const RecordsPage = lazy(() => import('./pages/Records'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const AlertsPage = lazy(() => import('./pages/Alerts'));
 
 // Components
 import Sidebar from './components/Sidebar';
+
+// Loading fallback
+const PageLoader: React.FC = () => (
+  <div className="flex h-screen items-center justify-center bg-white dark:bg-[#111121]">
+    <div className="space-y-4 text-center">
+      <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto" />
+      <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Carregando...</p>
+    </div>
+  </div>
+);
+
+// Wrapper for Suspense
+const LazyPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Suspense fallback={<PageLoader />}>
+    {children}
+  </Suspense>
+);
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -143,10 +160,16 @@ const App: React.FC = () => {
 
           <div className="flex-1 flex overflow-hidden">
             <Routes>
-              <Route path="/login" element={<LoginPage />} />
+              <Route path="/login" element={
+                <LazyPage>
+                  <LoginPage />
+                </LazyPage>
+              } />
               <Route path="/onboarding" element={
                 <OnboardingCheck>
-                  <OnboardingPage />
+                  <LazyPage>
+                    <OnboardingPage />
+                  </LazyPage>
                 </OnboardingCheck>
               } />
               <Route path="/*" element={
@@ -159,28 +182,38 @@ const App: React.FC = () => {
                     <div className="flex-1 flex flex-col min-w-0">
                       <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3">
+                          <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3" aria-hidden="true">
                             <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
                           </div>
                           <span className="font-black text-base tracking-tighter uppercase">GlicoSIM</span>
                         </div>
-                        <NavLink to="/ajustes" className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90">
-                          <span className="material-symbols-outlined text-slate-500 text-[20px]">person</span>
+                        <NavLink 
+                          to="/ajustes" 
+                          className="min-w-[44px] min-h-[44px] rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                          aria-label="Configurações"
+                        >
+                          <span className="material-symbols-outlined text-slate-500 text-[20px]" aria-hidden="true">person</span>
                         </NavLink>
                       </div>
 
                       <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar relative">
-                        <Routes>
-                          <Route path="/" element={<DashboardPage />} />
-                          <Route path="/registros" element={<RecordsPage />} />
-                          <Route path="/alertas" element={<AlertsPage />} />
-                          <Route path="/ajustes" element={<SettingsPage />} />
-                          <Route path="*" element={<Navigate to="/" />} />
-                        </Routes>
+                        <LazyPage>
+                          <Routes>
+                            <Route path="/" element={<DashboardPage />} />
+                            <Route path="/registros" element={<RecordsPage />} />
+                            <Route path="/alertas" element={<AlertsPage />} />
+                            <Route path="/ajustes" element={<SettingsPage />} />
+                            <Route path="*" element={<Navigate to="/" />} />
+                          </Routes>
+                        </LazyPage>
                       </main>
 
                       {/* Fixed Mobile Bottom Navigation */}
-                      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-6 pb-2">
+                      <nav 
+                        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-6"
+                        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                        aria-label="Menu de navegação principal"
+                      >
                         <div className="flex w-[40%] justify-around">
                           <MobileNavItem to="/" icon="home" label="Início" />
                           <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
@@ -190,9 +223,10 @@ const App: React.FC = () => {
                         <div className="relative w-[20%] flex justify-center">
                           <Link 
                             to="/registros?new=true"
-                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(234,88,12,0.4)] border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100]"
+                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(234,88,12,0.4)] border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                            aria-label="Adicionar novo registro"
                           >
-                            <span className="material-symbols-outlined text-3xl font-bold">add</span>
+                            <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">add</span>
                           </Link>
                         </div>
 
@@ -202,7 +236,7 @@ const App: React.FC = () => {
                         </div>
                       </nav>
                       {/* Safe Area Spacer for Mobile Menu */}
-                      <div className="md:hidden h-20 w-full shrink-0"></div>
+                      <div className="md:hidden w-full shrink-0" style={{ height: 'calc(5rem + env(safe-area-inset-bottom))' }}></div>
                     </div>
                   </div>
                 </PrivateRoute>
@@ -230,10 +264,11 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink 
     to={to} 
     className={({ isActive }) => 
-      `flex flex-col items-center gap-1 transition-all ${isActive ? 'text-orange-600' : 'text-slate-400'}`
+      `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600' : 'text-slate-500 dark:text-slate-300'}`
     }
+    aria-label={label}
   >
-    <span className="material-symbols-outlined text-[24px]">{icon}</span>
+    <span className="material-symbols-outlined text-[24px]" aria-hidden="true">{icon}</span>
     <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
   </NavLink>
 );
