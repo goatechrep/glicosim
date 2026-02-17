@@ -60,7 +60,7 @@ const DashboardPage: React.FC = () => {
       {/* Main Content Grid */}
       <div className="grid gap-8 md:grid-cols-12">
         {/* Charts Section */}
-        <div className="md:col-span-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#09090b] shadow-sm overflow-hidden flex flex-col">
+        <div className="md:col-span-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Tendência Semanal</h3>
             <div className="flex gap-2">
@@ -92,7 +92,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Recent Activity Section */}
-        <div className="md:col-span-4 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#09090b] shadow-sm flex flex-col">
+        <div className="md:col-span-4 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Últimas Medições</h3>
           </div>
@@ -136,7 +136,7 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ title, value, unit, icon, color = "text-slate-900 dark:text-white", trend }) => (
-  <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#09090b] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+  <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
     <div className="flex items-center justify-between mb-6">
       <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-colors">
         <span className="material-symbols-outlined text-[20px]">{icon}</span>

@@ -41,14 +41,14 @@ const AlertsPage: React.FC = () => {
              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Sincronizando...</span>
           </div>
         ) : alerts.length === 0 ? (
-          <div className="bg-white dark:bg-[#09090b] border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-4xl p-24 text-center shadow-sm">
+          <div className="bg-white dark:bg-[#111121] border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-4xl p-24 text-center shadow-sm">
             <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-6">
               <span className="material-symbols-outlined text-4xl text-slate-300">notifications_off</span>
             </div>
             <p className="text-slate-500 font-black uppercase tracking-widest text-sm">Nenhuma notificação por enquanto</p>
           </div>
         ) : alerts.map(alert => (
-          <div key={alert.id} className="bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-800/80 p-8 rounded-4xl flex flex-col md:flex-row items-start gap-8 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300 group">
+          <div key={alert.id} className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800/80 p-8 rounded-4xl flex flex-col md:flex-row items-start gap-8 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300 group">
             <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shrink-0 border-2 ${severityStyles[alert.severity]} transition-transform group-hover:rotate-3`}>
               <span className="material-symbols-outlined text-[28px]">
                 {alert.severity === 'high' ? 'error' : alert.severity === 'medium' ? 'warning' : 'notifications_active'}

@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#111121] flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full animate-fade-in">
         <div className="text-center mb-10">
            <div className="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-orange-500/20 transform rotate-3">

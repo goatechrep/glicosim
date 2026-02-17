@@ -88,13 +88,13 @@ const RecordsPage: React.FC = () => {
     <div className="animate-fade-in relative min-h-full">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Registros</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seu histórico de medições glicêmicas.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase italic">Registros</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Gerencie seu histórico de medições glicêmicas.</p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={() => { setEditingId(null); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-700 transition-all active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-700 transition-all active:scale-95"
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
             Novo Registro
@@ -104,70 +104,65 @@ const RecordsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 md:block gap-4">
         {loading && !isDeleteModalOpen ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm font-medium text-slate-400">Carregando seus dados...</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Sincronizando Banco</p>
           </div>
         ) : records.length === 0 ? (
-          <div className="bg-slate-50 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center">
-             <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">history</span>
-             <p className="text-slate-500 font-medium text-sm">Nenhum registro encontrado.</p>
+          <div className="bg-slate-50 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-4xl p-24 text-center">
+             <span className="material-symbols-outlined text-4xl text-slate-300 mb-4">history</span>
+             <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Ainda não há medições registradas.</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-[#111121] rounded-4xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead className="hidden md:table-header-group">
                   <tr className="border-b border-slate-100 dark:border-slate-800">
-                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Data</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Período</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Valor</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Dose</th>
-                    <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Ações</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Período</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Valor</th>
+                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Dose</th>
+                    <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {records.map(rec => (
                     <tr key={rec.id} className="block md:table-row group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="block md:table-cell px-6 py-4 md:py-5">
+                      <td className="block md:table-cell px-8 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="md:hidden w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
-                             <span className="material-symbols-outlined text-[18px]">calendar_today</span>
-                          </div>
-                          <div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                              {rec.data.split('-').reverse().join('/')}
-                            </span>
-                          </div>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            {rec.data.split('-').reverse().join('/')}
+                          </span>
                         </div>
                       </td>
-                      <td className="block md:table-cell px-6 py-0 md:py-5">
-                        <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 uppercase">
+                      <td className="block md:table-cell px-8 py-0 md:py-5">
+                        <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[10px] font-black text-orange-600 uppercase tracking-tighter">
                           {rec.periodo}
                         </span>
                       </td>
-                      <td className="block md:table-cell px-6 py-4 md:py-5">
+                      <td className="block md:table-cell px-8 py-5">
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-lg font-black ${rec.antesRefeicao > 140 ? 'text-orange-500' : 'text-orange-600'}`}>
+                          <span className={`text-xl font-black italic tracking-tighter ${rec.antesRefeicao > 140 ? 'text-amber-500' : 'text-orange-600'}`}>
                             {rec.antesRefeicao}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">mg/dL</span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">mg/dL</span>
                         </div>
                       </td>
-                      <td className="hidden md:table-cell px-6 py-4 md:py-5 text-sm font-medium text-slate-500">
+                      <td className="hidden md:table-cell px-8 py-5 text-sm font-bold text-slate-500">
                         {rec.dose || '-'}
                       </td>
-                      <td className="block md:table-cell px-6 py-4 md:py-5 text-right">
-                        <div className="flex justify-end gap-1">
+                      <td className="block md:table-cell px-8 py-5 text-right">
+                        <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => { setFormData(rec); setEditingId(rec.id); setIsModalOpen(true); }}
-                            className="p-2 hover:bg-orange-50 dark:hover:bg-orange-950/20 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"
+                            className="w-9 h-9 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-950/30 text-slate-400 hover:text-orange-600 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-[20px]">edit</span>
                           </button>
                           <button 
                             onClick={() => openDeleteModal(rec.id)}
-                            className="p-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                            className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
@@ -185,143 +180,133 @@ const RecordsPage: React.FC = () => {
       {/* Floating Action Button for Mobile */}
       <button 
         onClick={() => { setEditingId(null); setIsModalOpen(true); }}
-        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-orange-500/40 z-40 active:scale-90 transition-transform"
+        className="md:hidden fixed bottom-24 right-6 w-16 h-16 bg-orange-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-orange-500/40 z-[40] active:scale-90 transition-transform"
       >
         <span className="material-symbols-outlined text-3xl">add</span>
       </button>
 
-      {/* FORM MODAL */}
+      {/* FORM MODAL - Z-INDEX CORRIGIDO PARA TOPO */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-fade-in transition-all p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in transition-all p-4">
           <div 
-            className="w-full max-w-lg bg-white dark:bg-[#09090b] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slide-up md:animate-zoom-in"
+            className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-t-4xl md:rounded-4xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up md:animate-zoom-in border border-slate-100 dark:border-slate-800"
           >
-            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-xl flex items-center justify-center">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-orange-600 text-white rounded-2xl flex items-center justify-center rotate-3 shadow-lg shadow-orange-500/20">
                   <span className="material-symbols-outlined">{editingId ? 'edit_note' : 'add_circle'}</span>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-none">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white leading-none uppercase italic">
                     {editingId ? 'Editar Medição' : 'Novo Registro'}
                   </h3>
-                  <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">Glicemia</p>
+                  <p className="text-[10px] text-orange-600 mt-1 uppercase tracking-[0.2em] font-black">Dados Biométricos</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-slate-900 transition-colors"
               >
-                <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleSave} className="p-8 space-y-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
               <button
                 type="button"
                 onClick={startVoiceCapture}
-                className={`w-full flex items-center justify-center gap-3 py-3 rounded-2xl border-2 border-dashed transition-all ${
+                className={`w-full flex items-center justify-center gap-4 py-4 rounded-3xl border-2 border-dashed transition-all ${
                   isVoiceProcessing 
                   ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-500 text-orange-600 animate-pulse' 
                   : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-orange-200 hover:bg-orange-50/30'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">{isVoiceProcessing ? 'hearing' : 'mic'}</span>
-                <span className="text-sm font-bold">{isVoiceProcessing ? 'Processando voz...' : 'Preencher via comando de voz'}</span>
+                <span className="material-symbols-outlined text-[24px]">{isVoiceProcessing ? 'hearing' : 'mic_none'}</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">{isVoiceProcessing ? 'Ouvindo...' : 'Comando de Voz IA'}</span>
               </button>
 
-              <div className="flex flex-col items-center justify-center py-4 bg-orange-50/30 dark:bg-orange-950/10 rounded-3xl border border-orange-100/50 dark:border-orange-900/20">
-                <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-2">Valor da Glicemia</span>
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center justify-center py-10 bg-slate-50 dark:bg-slate-900/50 rounded-4xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Medição Glicêmica</span>
+                <div className="flex items-center gap-4">
                   <input 
                     type="number" 
                     value={formData.antesRefeicao} 
                     onChange={e => setFormData({...formData, antesRefeicao: Number(e.target.value)})}
-                    className="w-32 text-center text-6xl font-black bg-transparent border-none outline-none text-slate-900 dark:text-white"
+                    className="w-40 text-center text-7xl font-black bg-transparent border-none outline-none text-orange-600 selection:bg-orange-100"
                     required 
                     autoFocus
                   />
-                  <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">mg/dL</span>
+                  <span className="text-sm font-black text-slate-400 uppercase tracking-widest">mg/dL</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">event</span> Data
-                  </label>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data do Evento</label>
                   <input 
                     type="date" 
                     value={formData.data} 
                     onChange={e => setFormData({...formData, data: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all dark:text-white"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">schedule</span> Período
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Momento do Dia</label>
                   <select 
                     value={formData.periodo} 
                     onChange={e => setFormData({...formData, periodo: e.target.value as Periodo})}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none dark:text-white"
                   >
                     {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">medication</span> Medicação
-                  </label>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Insulina/Med</label>
                   <select 
                     value={formData.medicamento} 
                     onChange={e => setFormData({...formData, medicamento: e.target.value as Medicamento})}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none dark:text-white"
                   >
                     {Object.values(Medicamento).map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">vaccines</span> Dose
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dose Aplicada</label>
                   <input 
                     type="text" 
-                    placeholder="ex: 10ui"
+                    placeholder="ex: 12ui"
                     value={formData.dose} 
                     onChange={e => setFormData({...formData, dose: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all dark:text-white"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">notes</span> Notas Adicionais
-                </label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Observações Rápidas</label>
                 <textarea 
-                  rows={2} 
-                  placeholder="Sentindo-se bem..."
+                  rows={3} 
+                  placeholder="Como você está se sentindo?"
                   value={formData.notes} 
                   onChange={e => setFormData({...formData, notes: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500 transition-all resize-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl px-6 py-4 text-sm font-medium outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all resize-none dark:text-white"
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-4">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3.5 px-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  className="flex-1 py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all"
                 >
-                  Cancelar
+                  Descartar
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] py-3.5 px-4 bg-orange-600 text-white font-bold text-sm rounded-2xl hover:bg-orange-700 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+                  className="flex-[2] py-4 px-6 bg-orange-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-orange-700 shadow-xl shadow-orange-500/30 transition-all active:scale-95"
                 >
                   Salvar Registro
                 </button>
@@ -331,29 +316,29 @@ const RecordsPage: React.FC = () => {
         </div>
       )}
 
-      {/* CONFIRM DELETE MODAL */}
+      {/* CONFIRM DELETE MODAL - Z-INDEX AINDA MAIOR PARA SOBREPOR TUDO */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-fade-in p-6">
-          <div className="w-full max-w-sm bg-white dark:bg-[#09090b] rounded-4xl shadow-2xl p-8 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
-            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <span className="material-symbols-outlined text-4xl">warning</span>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/90 backdrop-blur-lg animate-fade-in p-6">
+          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[2.5rem] shadow-2xl p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
+            <div className="w-24 h-24 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-bounce">
+              <span className="material-symbols-outlined text-5xl">warning</span>
             </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Excluir Registro?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 font-medium leading-relaxed">
-              Esta ação é irreversível. O registro selecionado será removido permanentemente do seu histórico.
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Excluir?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed">
+              Esta ação removerá permanentemente o registro. Você tem certeza absoluta disso?
             </p>
-            <div className="flex flex-col gap-3 mt-8">
+            <div className="flex flex-col gap-3 mt-10">
               <button 
                 onClick={handleConfirmDelete}
-                className="w-full py-4 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-700 shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                className="w-full py-5 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-700 shadow-xl shadow-red-500/30 active:scale-95 transition-all"
               >
-                Sim, Excluir Agora
+                Confirmar Exclusão
               </button>
               <button 
                 onClick={() => { setIsDeleteModalOpen(false); setRecordToDelete(null); }}
-                className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                className="w-full py-5 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-100 transition-all"
               >
-                Não, Manter Registro
+                Manter Registro
               </button>
             </div>
           </div>

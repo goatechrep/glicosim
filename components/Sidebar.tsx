@@ -20,7 +20,7 @@ const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-72 h-full bg-white dark:bg-[#09090b] flex flex-col border-r border-slate-200 dark:border-slate-800/60 p-6">
+    <aside className="w-72 h-full bg-white dark:bg-[#111121] flex flex-col border-r border-slate-200 dark:border-slate-800/60 p-6">
       <div className="px-2 py-8 flex items-center gap-3 mb-8">
         <div className="w-10 h-10 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 rotate-3 transition-transform hover:rotate-0">
           <span className="material-symbols-outlined text-white text-[24px] font-bold">bloodtype</span>

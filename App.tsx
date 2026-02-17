@@ -88,7 +88,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-white dark:bg-[#09090b]">
+    <div className="h-screen flex items-center justify-center bg-white dark:bg-[#111121]">
       <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
@@ -101,7 +101,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <HashRouter>
-        <div className="min-h-screen bg-white dark:bg-[#09090b] text-slate-950 dark:text-slate-50 overflow-hidden">
+        <div className="min-h-screen bg-white dark:bg-[#111121] text-slate-950 dark:text-slate-50 overflow-hidden">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/onboarding" element={
@@ -119,7 +119,7 @@ const App: React.FC = () => {
 
                   <div className="flex-1 flex flex-col min-w-0">
                     {/* Mobile Top Header */}
-                    <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl z-50">
+                    <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3">
                           <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
@@ -142,7 +142,7 @@ const App: React.FC = () => {
                     </main>
 
                     {/* Mobile Bottom Navigation */}
-                    <nav className="md:hidden sticky bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-around px-4 z-50 pb-2">
+                    <nav className="md:hidden sticky bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#111121]/90 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-around px-4 z-50 pb-2">
                       <MobileNavItem to="/" icon="home" label="Início" />
                       <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
                       <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />

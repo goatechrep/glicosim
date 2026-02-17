@@ -57,7 +57,7 @@ const SettingsPage: React.FC = () => {
 
       <div className="max-w-4xl pt-2">
         {activeTab === 'perfil' && (
-          <div className="bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-sm space-y-8 animate-slide-up">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-sm space-y-8 animate-slide-up">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-2xl font-black text-orange-600 border border-orange-100 dark:border-orange-900/30">
                 {user?.nome?.[0] || 'U'}
@@ -113,7 +113,7 @@ const SettingsPage: React.FC = () => {
         )}
 
         {activeTab === 'sistema' && (
-          <div className="bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-sm space-y-10 animate-slide-up">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-sm space-y-10 animate-slide-up">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-orange-600 text-lg">palette</span>
@@ -175,7 +175,7 @@ const InputShadcn = ({ label, ...props }: any) => (
 );
 
 const FeatureCard = ({ title, icon, description }: any) => (
-  <div className="bg-white dark:bg-[#09090b] border border-slate-100 dark:border-slate-800 p-5 rounded-2xl flex flex-col items-center text-center gap-2 shadow-sm hover:shadow-md transition-all group">
+  <div className="bg-white dark:bg-[#111121] border border-slate-100 dark:border-slate-800 p-5 rounded-2xl flex flex-col items-center text-center gap-2 shadow-sm hover:shadow-md transition-all group">
     <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 text-slate-400 group-hover:text-orange-600 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/20 rounded-xl flex items-center justify-center transition-all mb-1">
       <span className="material-symbols-outlined text-[20px]">{icon}</span>
     </div>
