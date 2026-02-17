@@ -12,6 +12,12 @@ const RecordsPage: React.FC = () => {
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Estados para gerenciar a dose refatorada
+  const [doseValue, setDoseValue] = useState<string>('0');
+  const [doseUnit, setDoseUnit] = useState<string>('UI');
+  const [doseError, setDoseError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
     periodo: Periodo.CAFE_MANHA,
     medicamento: Medicamento.NENHUM,
@@ -30,12 +36,45 @@ const RecordsPage: React.FC = () => {
     setLoading(false);
   };
 
+  // Helper para analisar a string de dose (ex: "10mg" -> { value: "10", unit: "mg" })
+  const parseDoseString = (doseStr: string) => {
+    const match = doseStr.match(/^(\d+[\.,]?\d*)\s*(UI|mg|ml|ui|UI)?$/i);
+    if (match) {
+      return {
+        value: match[1],
+        unit: (match[2] || 'UI').toUpperCase()
+      };
+    }
+    return { value: doseStr || '0', unit: 'UI' };
+  };
+
+  const validateDose = (val: string, unit: string) => {
+    const num = parseFloat(val.replace(',', '.'));
+    if (isNaN(num) || num < 0) return "Valor inválido";
+    
+    if (unit === 'UI' && num > 200) return "Dose de UI incomum (>200)";
+    if (unit === 'mg' && num > 5000) return "Dose de mg muito alta (>5000)";
+    if (unit === 'ml' && num > 50) return "Dose de ml incomum (>50)";
+    
+    return null;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const error = validateDose(doseValue, doseUnit);
+    if (error) {
+      setDoseError(error);
+      return;
+    }
+
+    const finalDose = `${doseValue} ${doseUnit}`;
+    const dataToSave = { ...formData, dose: finalDose };
+
     if (editingId) {
-      await mockService.updateRecord(editingId, formData);
+      await mockService.updateRecord(editingId, dataToSave);
     } else {
-      await mockService.createRecord(formData as any);
+      await mockService.createRecord(dataToSave as any);
     }
     setIsModalOpen(false);
     setEditingId(null);
@@ -76,13 +115,32 @@ const RecordsPage: React.FC = () => {
           antesRefeicao: parsed.valor_glicemia || prev.antesRefeicao,
           periodo: (parsed.periodo as Periodo) || prev.periodo,
           medicamento: (parsed.medicamento as Medicamento) || prev.medicamento,
-          dose: parsed.dose || prev.dose,
           notes: parsed.notes || prev.notes
         }));
+        
+        if (parsed.dose) {
+          const { value, unit } = parseDoseString(parsed.dose);
+          setDoseValue(value);
+          setDoseUnit(unit);
+        }
       }
     };
     recognition.start();
   };
+
+  // Ao abrir o modal para editar
+  useEffect(() => {
+    if (isModalOpen && editingId) {
+      const { value, unit } = parseDoseString(formData.dose || '0');
+      setDoseValue(value);
+      setDoseUnit(unit);
+      setDoseError(null);
+    } else if (isModalOpen && !editingId) {
+      setDoseValue('0');
+      setDoseUnit('UI');
+      setDoseError(null);
+    }
+  }, [isModalOpen, editingId]);
 
   return (
     <div className="animate-fade-in relative min-h-full">
@@ -149,7 +207,7 @@ const RecordsPage: React.FC = () => {
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">mg/dL</span>
                         </div>
                       </td>
-                      <td className="hidden md:table-cell px-8 py-5 text-sm font-bold text-slate-500">
+                      <td className="hidden md:table-cell px-8 py-5 text-sm font-bold text-slate-500 italic">
                         {rec.dose || '-'}
                       </td>
                       <td className="block md:table-cell px-8 py-5 text-right">
@@ -185,7 +243,7 @@ const RecordsPage: React.FC = () => {
         <span className="material-symbols-outlined text-3xl">add</span>
       </button>
 
-      {/* FORM MODAL - Z-INDEX CORRIGIDO PARA TOPO */}
+      {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in transition-all p-4">
           <div 
@@ -273,15 +331,45 @@ const RecordsPage: React.FC = () => {
                     {Object.values(Medicamento).map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
+                
+                {/* CAMPO DE DOSE REFATORADO COM SELETOR DE UNIDADE */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dose Aplicada</label>
-                  <input 
-                    type="text" 
-                    placeholder="ex: 12ui"
-                    value={formData.dose} 
-                    onChange={e => setFormData({...formData, dose: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all dark:text-white"
-                  />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                    <span>Dose Aplicada</span>
+                    {doseError && <span className="text-red-500 lowercase font-bold">{doseError}</span>}
+                  </label>
+                  <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden focus-within:ring-4 focus-within:ring-orange-500/10 focus-within:border-orange-500 transition-all">
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="0"
+                      value={doseValue} 
+                      onChange={e => {
+                        setDoseValue(e.target.value);
+                        setDoseError(null);
+                      }}
+                      className="flex-1 min-w-0 bg-transparent px-5 py-4 text-sm font-bold outline-none dark:text-white"
+                    />
+                    <div className="flex p-1.5 gap-1 bg-slate-100 dark:bg-slate-800/50">
+                      {['UI', 'mg', 'ml'].map(unit => (
+                        <button
+                          key={unit}
+                          type="button"
+                          onClick={() => {
+                            setDoseUnit(unit);
+                            setDoseError(null);
+                          }}
+                          className={`px-3 py-1 rounded-xl text-[10px] font-black transition-all ${
+                            doseUnit === unit 
+                              ? 'bg-orange-600 text-white shadow-md' 
+                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -316,7 +404,7 @@ const RecordsPage: React.FC = () => {
         </div>
       )}
 
-      {/* CONFIRM DELETE MODAL - Z-INDEX AINDA MAIOR PARA SOBREPOR TUDO */}
+      {/* CONFIRM DELETE MODAL */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/90 backdrop-blur-lg animate-fade-in p-6">
           <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[2.5rem] shadow-2xl p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
