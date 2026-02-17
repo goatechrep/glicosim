@@ -8,6 +8,8 @@ const RecordsPage: React.FC = () => {
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
@@ -40,9 +42,17 @@ const RecordsPage: React.FC = () => {
     loadRecords();
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Excluir este registro permanentemente?')) {
-      await mockService.deleteRecord(id);
+  const openDeleteModal = (id: string) => {
+    setRecordToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (recordToDelete) {
+      setLoading(true);
+      await mockService.deleteRecord(recordToDelete);
+      setRecordToDelete(null);
+      setIsDeleteModalOpen(false);
       await loadRecords();
     }
   };
@@ -92,9 +102,8 @@ const RecordsPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Grid de Cards para Mobile / Tabela para Desktop */}
       <div className="grid grid-cols-1 md:block gap-4">
-        {loading ? (
+        {loading && !isDeleteModalOpen ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
             <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-sm font-medium text-slate-400">Carregando seus dados...</p>
@@ -157,7 +166,7 @@ const RecordsPage: React.FC = () => {
                             <span className="material-symbols-outlined text-[20px]">edit</span>
                           </button>
                           <button 
-                            onClick={() => handleDelete(rec.id)}
+                            onClick={() => openDeleteModal(rec.id)}
                             className="p-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
                           >
                             <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -181,13 +190,12 @@ const RecordsPage: React.FC = () => {
         <span className="material-symbols-outlined text-3xl">add</span>
       </button>
 
-      {/* MODAL / BOTTOM SHEET REFACTOR */}
+      {/* FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-fade-in transition-all">
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-fade-in transition-all p-4">
           <div 
             className="w-full max-w-lg bg-white dark:bg-[#09090b] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slide-up md:animate-zoom-in"
           >
-            {/* Modal Header */}
             <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-xl flex items-center justify-center">
@@ -208,10 +216,7 @@ const RecordsPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Modal Content */}
             <form onSubmit={handleSave} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-              
-              {/* Voice Assist Button */}
               <button
                 type="button"
                 onClick={startVoiceCapture}
@@ -225,7 +230,6 @@ const RecordsPage: React.FC = () => {
                 <span className="text-sm font-bold">{isVoiceProcessing ? 'Processando voz...' : 'Preencher via comando de voz'}</span>
               </button>
 
-              {/* Big Glicemy Input */}
               <div className="flex flex-col items-center justify-center py-4 bg-orange-50/30 dark:bg-orange-950/10 rounded-3xl border border-orange-100/50 dark:border-orange-900/20">
                 <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-2">Valor da Glicemia</span>
                 <div className="flex items-center gap-3">
@@ -241,7 +245,6 @@ const RecordsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Main Fields Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1">
@@ -308,7 +311,6 @@ const RecordsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button 
                   type="button"
@@ -329,7 +331,35 @@ const RecordsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Adding custom animations to tailwind via style tag in case they aren't global */}
+      {/* CONFIRM DELETE MODAL */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-fade-in p-6">
+          <div className="w-full max-w-sm bg-white dark:bg-[#09090b] rounded-4xl shadow-2xl p-8 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
+            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <span className="material-symbols-outlined text-4xl">warning</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Excluir Registro?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 font-medium leading-relaxed">
+              Esta ação é irreversível. O registro selecionado será removido permanentemente do seu histórico.
+            </p>
+            <div className="flex flex-col gap-3 mt-8">
+              <button 
+                onClick={handleConfirmDelete}
+                className="w-full py-4 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-700 shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+              >
+                Sim, Excluir Agora
+              </button>
+              <button 
+                onClick={() => { setIsDeleteModalOpen(false); setRecordToDelete(null); }}
+                className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+              >
+                Não, Manter Registro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slide-up {
           from { transform: translateY(100%); opacity: 0; }
