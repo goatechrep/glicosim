@@ -76,10 +76,23 @@
         -webkit-font-smoothing: antialiased;
         overscroll-behavior-y: contain;
       }
-      * { transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease; }
+
+      /* Transição de tema ultra fluida */
+      html, body, #root, aside, main, nav, div, section, header, footer, button, input, select, textarea, table, tr, th, td {
+        transition: background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1), 
+                    border-color 0.45s cubic-bezier(0.4, 0, 0.2, 1), 
+                    color 0.35s ease-in-out,
+                    box-shadow 0.45s ease;
+      }
+
+      /* Evita transições saltitantes no carregamento inicial */
+      .preload * {
+        transition: none !important;
+      }
       
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        transition: font-variation-settings 0.2s ease !important;
       }
       .active .material-symbols-outlined {
         font-variation-settings: 'FILL' 1;
@@ -105,7 +118,15 @@
     }
     </script>
   </head>
-  <body>
+  <body class="preload">
     <div id="root"></div>
+    <script>
+      // Remove a classe de bloqueio de transição após o carregamento
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          document.body.classList.remove('preload');
+        }, 150);
+      });
+    </script>
   </body>
 </html>
