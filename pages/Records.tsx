@@ -191,7 +191,7 @@ const RecordsPage: React.FC = () => {
             </tbody>
           </table>
           <div class="footer">
-            Este relatório foi gerado através do ecossistema GlicoSIM Premium Health.
+            Este relatório foi gerado através do ecossistema GlicoSIM.
           </div>
           <script>
             window.onload = () => { window.print(); window.close(); };
@@ -327,7 +327,7 @@ const RecordsPage: React.FC = () => {
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase leading-none">Registros</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Controle sua saúde com precisão absoluta.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <button 
             onClick={exportToCSV}
             className="flex items-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
@@ -505,7 +505,7 @@ const RecordsPage: React.FC = () => {
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Apagar Registro?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
             <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleConfirmDelete} className="w-full py-4 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-red-500/30">Excluir Permanente</button>
+              <button onClick={handleConfirmDelete} className="w-full py-4 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl">Excluir Permanente</button>
               <button onClick={() => setIsDeleteModalOpen(false)} className="w-full py-4 bg-slate-50 dark:bg-slate-900 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl">Manter Registro</button>
             </div>
           </div>
@@ -513,7 +513,7 @@ const RecordsPage: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-0">
           <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-4xl shadow-2xl overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Registro</h3>
@@ -538,9 +538,9 @@ const RecordsPage: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase rounded-2xl">Cancelar</button>
-                <button type="submit" className="flex-[2] py-4 bg-orange-600 text-white font-black text-[10px] uppercase rounded-2xl shadow-xl shadow-orange-500/20">Salvar Dados</button>
+              <div className="flex gap-3 pt-4 pb-10">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar Dados</button>
               </div>
             </form>
           </div>

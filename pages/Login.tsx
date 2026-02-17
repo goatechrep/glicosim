@@ -101,7 +101,7 @@ const LoginPage: React.FC = () => {
                  <div className="flex justify-between items-center ml-1">
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Senha</label>
                     {activeTab === 'login' && (
-                      <button type="button" className="text-[10px] font-bold text-orange-600 hover:underline">Esqueceu?</button>
+                      <button type="button" className="text-[10px] font-bold text-orange-600 hover:underline">Esqueceu sua senha?</button>
                     )}
                  </div>
                  <div className="relative">
@@ -129,8 +129,8 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <p className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-4">
-          Ao continuar, você concorda com nossos <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Termos de Uso</span> e <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Privacidade</span>.
+        <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-6">
+          Leia nossos <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Termos de Uso</span> e <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Política de Privacidade</span>.
         </p>
       </div>
       

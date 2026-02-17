@@ -67,7 +67,7 @@ const DashboardPage: React.FC = () => {
     <div className="flex flex-col gap-8 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="animate-slide-up-subtle">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Olá, {user?.nome?.split(' ')[0] || 'Usuário'}</h2>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Olá, {user?.nome?.split(' ')[0] || 'Usuário'}!</h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
         </div>
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20 shadow-sm">
