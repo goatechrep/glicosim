@@ -26,7 +26,7 @@ const Sidebar: React.FC = () => {
           <span className="material-symbols-outlined text-white text-[24px] font-bold">bloodtype</span>
         </div>
         <div>
-          <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none uppercase italic">GlicoSIM</h1>
+          <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none uppercase">GlicoSIM</h1>
           <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mt-1">Premium Health</p>
         </div>
       </div>

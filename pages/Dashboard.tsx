@@ -11,7 +11,6 @@ const DashboardPage: React.FC = () => {
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Memoize data fetching to ensure it's clean and can be called on demand
   const loadData = useCallback(async () => {
     const s = await mockService.getDashboardStats();
     const r = await mockService.getRecords();
@@ -22,8 +21,6 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    
-    // Optional: Real-time interval for "live" feel (e.g. every 30s)
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, [loadData]);
@@ -43,7 +40,7 @@ const DashboardPage: React.FC = () => {
     <div className="flex flex-col gap-8 animate-fade-in pb-20">
       <div className="flex items-center justify-between">
         <div className="animate-slide-up-subtle">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white italic uppercase">OLÁ, {user?.nome?.toUpperCase() || 'USUÁRIO'}</h2>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">OLÁ, {user?.nome?.toUpperCase() || 'USUÁRIO'}</h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Status atualizado do seu controle glicêmico.</p>
         </div>
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20 shadow-sm">
@@ -108,7 +105,7 @@ const DashboardPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xl font-black italic tracking-tighter ${record.antesRefeicao > 140 ? 'text-amber-600' : 'text-orange-600'}`}>{record.antesRefeicao}</span>
+                    <span className={`text-xl font-black tracking-tighter ${record.antesRefeicao > 140 ? 'text-amber-600' : 'text-orange-600'}`}>{record.antesRefeicao}</span>
                     <span className="text-[10px] text-slate-400 font-black ml-1 uppercase">mg/dL</span>
                   </div>
                 </div>
@@ -117,10 +114,6 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes slide-up-subtle { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up-subtle { animation: slide-up-subtle 0.4s ease-out forwards; }
-      `}</style>
     </div>
   );
 };
@@ -149,7 +142,7 @@ const Card: React.FC<CardProps> = ({ title, value, unit, icon, color = "text-sla
     <div className="space-y-1.5">
       <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{title}</p>
       <div className="flex items-baseline gap-2">
-        <span className={`text-4xl font-black italic tracking-tighter ${color}`}>{value}</span>
+        <span className={`text-4xl font-black tracking-tighter ${color}`}>{value}</span>
         <span className="text-[11px] text-slate-400 font-black uppercase tracking-widest">{unit}</span>
       </div>
     </div>

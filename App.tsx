@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, NavLink, Link } from 'react-router-dom';
 import { UserProfile } from './types';
 import { mockService } from './services/mockService';
 
@@ -98,67 +98,126 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 };
 
 const App: React.FC = () => {
+  const [isOffline, setIsOffline] = useState(!window.navigator.onLine);
+  const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      setShowSyncSuccess(true);
+      setTimeout(() => setShowSyncSuccess(false), 4000);
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <HashRouter>
-        <div className="min-h-screen bg-white dark:bg-[#111121] text-slate-950 dark:text-slate-50 overflow-hidden">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/onboarding" element={
-              <OnboardingCheck>
-                <OnboardingPage />
-              </OnboardingCheck>
-            } />
-            <Route path="/*" element={
-              <PrivateRoute>
-                <div className="flex h-screen overflow-hidden">
-                  {/* Desktop Sidebar */}
-                  <div className="hidden md:block">
-                    <Sidebar />
-                  </div>
+        <div className="min-h-screen bg-white dark:bg-[#111121] text-slate-950 dark:text-slate-50 overflow-hidden flex flex-col">
+          
+          {isOffline && (
+            <div className="bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[100] border-b border-orange-500/30">
+              <span className="material-symbols-outlined text-orange-500 animate-pulse text-[20px]">cloud_off</span>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em]">
+                Você está offline. <span className="text-orange-400">Dados serão sincronizados</span> ao retornar.
+              </p>
+            </div>
+          )}
 
-                  <div className="flex-1 flex flex-col min-w-0">
-                    {/* Mobile Top Header */}
-                    <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3">
-                          <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
-                        </div>
-                        <span className="font-black text-base tracking-tighter italic uppercase">GlicoSIM</span>
-                      </div>
-                      <NavLink to="/ajustes" className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90">
-                        <span className="material-symbols-outlined text-slate-500 text-[20px]">person</span>
-                      </NavLink>
+          {showSyncSuccess && !isOffline && (
+            <div className="bg-emerald-600 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[100]">
+              <span className="material-symbols-outlined text-[20px]">sync</span>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em]">
+                Conexão restabelecida. <span className="opacity-80">Sincronizando dados agora...</span>
+              </p>
+            </div>
+          )}
+
+          <div className="flex-1 flex overflow-hidden">
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/onboarding" element={
+                <OnboardingCheck>
+                  <OnboardingPage />
+                </OnboardingCheck>
+              } />
+              <Route path="/*" element={
+                <PrivateRoute>
+                  <div className="flex w-full h-full overflow-hidden">
+                    <div className="hidden md:block">
+                      <Sidebar />
                     </div>
 
-                    <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar">
-                      <Routes>
-                        <Route path="/" element={<DashboardPage />} />
-                        <Route path="/registros" element={<RecordsPage />} />
-                        <Route path="/alertas" element={<AlertsPage />} />
-                        <Route path="/ajustes" element={<SettingsPage />} />
-                        <Route path="*" element={<Navigate to="/" />} />
-                      </Routes>
-                    </main>
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3">
+                            <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
+                          </div>
+                          <span className="font-black text-base tracking-tighter uppercase">GlicoSIM</span>
+                        </div>
+                        <NavLink to="/ajustes" className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90">
+                          <span className="material-symbols-outlined text-slate-500 text-[20px]">person</span>
+                        </NavLink>
+                      </div>
 
-                    {/* Mobile Bottom Navigation */}
-                    <nav className="md:hidden sticky bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#111121]/90 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-around px-4 z-50 pb-2">
-                      <MobileNavItem to="/" icon="home" label="Início" />
-                      <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
-                      <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />
-                      <MobileNavItem to="/ajustes" icon="settings" label="Ajustes" />
-                    </nav>
+                      <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar">
+                        <Routes>
+                          <Route path="/" element={<DashboardPage />} />
+                          <Route path="/registros" element={<RecordsPage />} />
+                          <Route path="/alertas" element={<AlertsPage />} />
+                          <Route path="/ajustes" element={<SettingsPage />} />
+                          <Route path="*" element={<Navigate to="/" />} />
+                        </Routes>
+                      </main>
+
+                      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-white/95 dark:bg-[#111121]/95 backdrop-blur-2xl border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between px-2 z-50 pb-2">
+                        <div className="flex w-1/2 justify-around">
+                          <MobileNavItem to="/" icon="home" label="Início" />
+                          <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
+                        </div>
+
+                        {/* Floating Center Button */}
+                        <div className="relative h-full flex items-center px-4">
+                          <Link 
+                            to="/registros?new=true"
+                            className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_12px_24px_rgba(234,88,12,0.4)] active:scale-90 active:bg-orange-700 transition-all border-4 border-white dark:border-[#111121]"
+                          >
+                            <span className="material-symbols-outlined text-3xl font-bold">add</span>
+                          </Link>
+                        </div>
+
+                        <div className="flex w-1/2 justify-around">
+                          <MobileNavItem to="/alertas" icon="notifications" label="Alertas" />
+                          <MobileNavItem to="/ajustes" icon="settings" label="Ajustes" />
+                        </div>
+                      </nav>
+                    </div>
                   </div>
-                </div>
-              </PrivateRoute>
-            } />
-          </Routes>
+                </PrivateRoute>
+              } />
+            </Routes>
+          </div>
         </div>
       </HashRouter>
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+        
+        @keyframes slide-down {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-slide-down { animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </AuthProvider>
   );
@@ -168,11 +227,11 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink 
     to={to} 
     className={({ isActive }) => 
-      `flex flex-col items-center gap-1.5 transition-all px-4 py-2 rounded-2xl ${isActive ? 'text-orange-600 bg-orange-50/50 dark:bg-orange-950/20 active' : 'text-slate-400'}`
+      `flex flex-col items-center gap-1.5 transition-all px-3 py-2 rounded-2xl ${isActive ? 'text-orange-600' : 'text-slate-400'}`
     }
   >
     <span className="material-symbols-outlined text-[24px]">{icon}</span>
-    <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
   </NavLink>
 );
 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { mockService } from '../services/mockService';
 import { parseVoiceCommand } from '../services/geminiService';
 import { GlucoseRecord, Periodo, Medicamento } from '../types';
@@ -11,6 +12,8 @@ interface Toast {
 }
 
 const RecordsPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +30,7 @@ const RecordsPage: React.FC = () => {
   const [filterDateStart, setFilterDateStart] = useState<string>('');
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
 
-  // Dose Refatorada
+  // Dose
   const [doseValue, setDoseValue] = useState<string>('0');
   const [doseUnit, setDoseUnit] = useState<string>('UI');
   const [doseError, setDoseError] = useState<string | null>(null);
@@ -40,6 +43,17 @@ const RecordsPage: React.FC = () => {
     notes: '',
     data: new Date().toISOString().split('T')[0]
   });
+
+  // Gatilho para abrir modal se vier do botão flutuante central
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('new') === 'true') {
+      setEditingId(null);
+      setIsModalOpen(true);
+      // Limpa a query após abrir
+      navigate('/registros', { replace: true });
+    }
+  }, [location.search, navigate]);
 
   useEffect(() => { loadRecords(); }, []);
 
@@ -210,7 +224,7 @@ const RecordsPage: React.FC = () => {
 
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase italic">Registros</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Registros</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Acompanhe e filtre sua evolução glicêmica.</p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -311,13 +325,13 @@ const RecordsPage: React.FC = () => {
                       </td>
                       <td className="block md:table-cell px-8 py-5">
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-xl font-black italic tracking-tighter ${rec.antesRefeicao > 140 ? 'text-amber-500' : 'text-orange-600'}`}>
+                          <span className={`text-xl font-black tracking-tighter ${rec.antesRefeicao > 140 ? 'text-amber-500' : 'text-orange-600'}`}>
                             {rec.antesRefeicao}
                           </span>
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">mg/dL</span>
                         </div>
                       </td>
-                      <td className="hidden md:table-cell px-8 py-5 text-sm font-bold text-slate-500 italic">
+                      <td className="hidden md:table-cell px-8 py-5 text-sm font-bold text-slate-500 font-mono">
                         {rec.dose || '-'}
                       </td>
                       <td className="block md:table-cell px-8 py-5 text-right">
@@ -355,7 +369,7 @@ const RecordsPage: React.FC = () => {
                   <span className="material-symbols-outlined">{editingId ? 'edit_note' : 'add_circle'}</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white leading-none uppercase italic">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white leading-none uppercase">
                     {editingId ? 'Editar Medição' : 'Novo Registro'}
                   </h3>
                   <p className="text-[10px] text-orange-600 mt-1 uppercase tracking-[0.2em] font-black">Dados Biométricos</p>
@@ -417,7 +431,7 @@ const RecordsPage: React.FC = () => {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Notas</label>
                 <textarea rows={3} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl px-6 py-4 text-sm font-medium outline-none resize-none dark:text-white" />
               </div>
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-4 pt-4 pb-12 md:pb-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl">Descartar</button>
                 <button type="submit" className="flex-[2] py-4 px-6 bg-orange-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-orange-500/30">Salvar Registro</button>
               </div>
@@ -433,7 +447,7 @@ const RecordsPage: React.FC = () => {
             <div className="w-24 h-24 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-bounce">
               <span className="material-symbols-outlined text-5xl">warning</span>
             </div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">Excluir?</h3>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Excluir?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed">Esta ação removerá permanentemente o registro.</p>
             <div className="flex flex-col gap-3 mt-10">
               <button onClick={handleConfirmDelete} className="w-full py-5 bg-red-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-red-500/30 active:scale-95">Confirmar Exclusão</button>
