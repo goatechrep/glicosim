@@ -51,15 +51,67 @@ export const useAuth = () => {
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     const init = async () => {
+      // Verificar se há dados no localStorage
+      const hasLocalData = localStorage.getItem('glicosim_data');
+      
+      if (!hasLocalData) {
+        // Sem dados no localStorage = sessão inválida
+        console.warn('❌ Nenhum dado no localStorage. Deslogando usuário...');
+        setSessionExpired(true);
+        setLoading(false);
+        return;
+      }
+
       const storedUser = await mockService.getUser();
+      
+      if (!storedUser) {
+        // Usuário não encontrado = sessão inválida
+        console.warn('❌ Usuário não encontrado. Deslogando...');
+        setSessionExpired(true);
+        setLoading(false);
+        return;
+      }
+
       setUser(storedUser);
       setLoading(false);
     };
     init();
   }, []);
+
+  // Monitorar mudanças no localStorage em tempo real
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'glicosim_data' && e.newValue === null) {
+        // Dados foram deletados em outra aba/sessão
+        console.warn('❌ Dados deletados em outra sessão. Deslogando...');
+        setUser(null);
+        setSessionExpired(true);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Verificação periódica (a cada 30s) para confirmar se dados existem
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      const hasLocalData = localStorage.getItem('glicosim_data');
+      if (!hasLocalData) {
+        console.warn('❌ Dados não encontrados em verificação periódica. Deslogando...');
+        setUser(null);
+        setSessionExpired(true);
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -83,20 +135,66 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const login = async (userData: Partial<UserProfile>) => {
     const newUser = await mockService.createUser(userData);
     setUser(newUser);
+    setSessionExpired(false);
   };
 
   const logout = () => {
     mockService.deleteUser();
     setUser(null);
+    setSessionExpired(false);
   };
 
   const refreshUser = async () => {
+    const hasLocalData = localStorage.getItem('glicosim_data');
+    if (!hasLocalData) {
+      // Dados foram deletados - deslogar
+      setUser(null);
+      setSessionExpired(true);
+      return;
+    }
+
     const updatedUser = await mockService.getUser();
+    if (!updatedUser) {
+      setUser(null);
+      setSessionExpired(true);
+      return;
+    }
     setUser(updatedUser);
   };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+      {/* Alerta de sessão expirada */}
+      {sessionExpired && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-sm animate-scale-fade-in">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">
+                  lock
+                </span>
+              </div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">
+                Sessão Expirada
+              </h3>
+            </div>
+
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              Seus dados não foram encontrados. Por segurança, você foi desconectado. Faça login novamente para continuar.
+            </p>
+
+            <button
+              onClick={() => {
+                setSessionExpired(false);
+                window.location.hash = '#/login';
+              }}
+              className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
+            >
+              Ir para Login
+            </button>
+          </div>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

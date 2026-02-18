@@ -292,6 +292,20 @@
       .focus-ring:focus-visible {
         outline: 2px solid #f97316;
         outline-offset: 2px;
+      @keyframes scale-fade-in {
+        from {
+          opacity: 0;
+          transform: scale(0.8) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .animate-scale-fade-in {
+        animation: scale-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
       }
     </style>
     <script type="importmap">

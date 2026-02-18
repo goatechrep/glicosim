@@ -479,6 +479,17 @@ export const supabaseService = {
     return supabaseToAlert(data);
   },
 
+  deleteAlert: async (alertId: string): Promise<void> => {
+    if (!supabaseClient) throw new Error('Supabase not configured');
+
+    const { error } = await supabaseClient
+      .from('alerts')
+      .delete()
+      .eq('id', alertId);
+
+    if (error) throw error;
+  },
+
   // ===== PAYMENTS =====
   getPaymentHistory: async (userId?: string): Promise<PaymentHistory[]> => {
     if (!supabaseClient) throw new Error('Supabase not configured');
