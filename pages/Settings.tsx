@@ -1,35 +1,136 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { mockService } from '../services/mockService';
+import { supabaseService } from '../services/supabaseService';
 import { PlanoType } from '../types';
+import { applyCPFMask, applyWhatsAppMask, validateCPF } from '../utils/formatters';
 
 const SettingsPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('perfil');
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  // States for new physical profile fields
+  // Estados para campos do perfil
+  const [nome, setNome] = useState<string>(user?.nome || '');
+  const [email, setEmail] = useState<string>(user?.email || '');
+  const [cpf, setCpf] = useState<string>(user?.cpf || '');
+  const [whatsapp, setWhatsapp] = useState<string>(user?.whatsapp || '');
+  const [bio, setBio] = useState<string>(user?.bio || '');
   const [peso, setPeso] = useState<string>(user?.peso?.toString() || '');
   const [altura, setAltura] = useState<string>(user?.altura?.toString() || '');
   const [biotipo, setBiotipo] = useState<string>(user?.biotipo || 'Mesomorfo');
+  const [fotoPerfil, setFotoPerfil] = useState<string>(user?.foto || '');
+  const [cpfError, setCpfError] = useState<string>('');
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = applyCPFMask(e.target.value);
+    setCpf(masked);
+    if (masked.length === 14) { // CPF formatado tem 14 caracteres
+      if (!validateCPF(masked)) {
+        setCpfError('CPF inválido');
+      } else {
+        setCpfError('');
+      }
+    } else {
+      setCpfError('');
+    }
+  };
+
+  const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = applyWhatsAppMask(e.target.value);
+    setWhatsapp(masked);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) {
+      alert('Erro: Arquivo ou usuário não identificado');
+      return;
+    }
+
+    // Validar formato
+    const validFormats = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validFormats.includes(file.type)) {
+      alert('🚫 Formato inválido. Use JPG, PNG ou WebP');
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('🚫 Arquivo muito grande. Máximo 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const imageUrl = await supabaseService.uploadProfileImage(user.id, file);
+      setFotoPerfil(imageUrl);
+      alert('✅ Foto de perfil atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro detalhado ao fazer upload:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`❌ Erro ao fazer upload: ${errorMsg}`);
+    } finally {
+      setUploadingImage(false);
+      // Limpar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleUpdate = async () => {
+    if (!user?.id) {
+      alert('Erro: Usuário não identificado. Faça login novamente.');
+      return;
+    }
+
+    if (!nome.trim()) {
+      alert('Nome é obrigatório');
+      return;
+    }
+
+    if (cpf && cpf.length === 14 && !validateCPF(cpf)) {
+      alert('CPF inválido');
+      return;
+    }
+
     setLoading(true);
-    await mockService.updateUser({ 
-      peso: peso ? parseFloat(peso) : undefined, 
-      altura: altura ? parseFloat(altura) : undefined,
-      biotipo 
-    });
-    await refreshUser();
-    setLoading(false);
+    try {
+      await supabaseService.updateUser(user.id, {
+        nome: nome.trim(),
+        cpf: cpf || undefined,
+        whatsapp: whatsapp || undefined,
+        bio: bio || undefined,
+        peso: peso ? parseFloat(peso) : undefined,
+        altura: altura ? parseFloat(altura) : undefined,
+        biotipo: biotipo || undefined,
+        foto: fotoPerfil || undefined,
+      });
+      await refreshUser();
+      alert('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`Erro ao atualizar perfil: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleThemeChange = async (theme: 'light' | 'dark' | 'system') => {
     setLoading(true);
-    await mockService.updateUser({ theme });
-    await refreshUser();
-    setLoading(false);
+    try {
+      await supabaseService.updateUser(user?.id || '', { theme });
+      await refreshUser();
+    } catch (error) {
+      console.error('Erro ao alterar tema:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const tabs = [
@@ -43,11 +144,11 @@ const SettingsPage: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Configurações</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seu perfil sem itálicos.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seu perfil e dados pessoais.</p>
         </div>
       </header>
 
-      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl max-w-md">
+      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl max-w-md">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -63,106 +164,164 @@ const SettingsPage: React.FC = () => {
         ))}
       </div>
 
-      <div className="max-w-4xl pt-2">
+      <div className="max-w-8xl pt-0">
         {activeTab === 'perfil' && (
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl space-y-10 animate-slide-up">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-lg space-y-8 animate-slide-up">
+            {/* Foto de Perfil */}
             <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-2xl font-black text-orange-600 border border-orange-100 dark:border-orange-900/30">
-                {user?.nome?.[0] || 'U'}
+              <div className="relative group">
+                <div className="w-24 h-24 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10 rounded-lg flex items-center justify-center text-4xl font-black text-orange-600 border-2 border-orange-200 dark:border-orange-900/30 overflow-hidden">
+                  {fotoPerfil ? (
+                    <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.nome?.[0] || 'U'
+                  )}
+                </div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="absolute -bottom-1 -right-2 bg-orange-600 text-white p-1 rounded-full border-1 border-white dark:border-slate-900 hover:bg-orange-700 transition-all disabled:opacity-50"
+                  title="Alterar foto de perfil"
+                >
+                  <span className="material-symbols-outlined text-[24px] p-1">camera_alt</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
               </div>
               <div className="space-y-1">
-                <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">Informações Básicas</h4>
-                <div className="flex gap-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID: {user?.id}</span>
+                <h5 className="font-bold text-slate-900 dark:text-white tracking-tight text-lg">{nome}</h5>
+                <div className="flex gap-4 flex-wrap">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">ID: {user?.id?.substring(0, 8)}</span>
+                </div>
+                {uploadingImage && <span className="text-[9px] text-orange-600 font-bold">Enviando imagem...</span>}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-8">
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 mb-6">Informações Pessoais</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField 
+                  label="Nome Completo" 
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                />
+                <InputField 
+                  label="E-mail" 
+                  value={email}
+                  disabled 
+                />
+                <InputField 
+                  label="CPF"
+                  value={cpf}
+                  onChange={handleCPFChange}
+                  placeholder="000.000.000-00"
+                  error={cpfError}
+                />
+                <InputField 
+                  label="WhatsApp"
+                  value={whatsapp}
+                  onChange={handleWhatsAppChange}
+                  placeholder="(11) 99999-9999"
+                />
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bio</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Conte um pouco sobre você..."
+                    maxLength={160}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none dark:text-white focus:ring-2 focus:ring-orange-500 transition-all resize-none"
+                    rows={3}
+                  />
+                  <span className="text-[9px] text-slate-400 mt-1 block">{bio.length}/160</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <InputShadcn label="Nome Completo" defaultValue={user?.nome} />
-              <InputShadcn label="E-mail" defaultValue={user?.email} disabled />
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-8">
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 mb-6">Dados Físicos</h4>
               
-              {/* Novos campos de perfil físico */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Peso (kg)</label>
-                <input 
-                  type="number"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField 
+                  label="Peso (kg)"
                   value={peso}
                   onChange={(e) => setPeso(e.target.value)}
                   placeholder="Ex: 75.5"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold outline-none appearance-none dark:text-white focus:ring-2 focus:ring-orange-600/10 transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Altura (cm)</label>
-                <input 
                   type="number"
+                />
+                <InputField 
+                  label="Altura (cm)"
                   value={altura}
                   onChange={(e) => setAltura(e.target.value)}
                   placeholder="Ex: 175"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold outline-none appearance-none dark:text-white focus:ring-2 focus:ring-orange-600/10 transition-all"
+                  type="number"
                 />
-              </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Biotipo Físico (Plano de Treino)</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['Ectomorfo', 'Mesomorfo', 'Endomorfo'].map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setBiotipo(type)}
-                      className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                        biotipo === type 
-                        ? 'border-orange-600 bg-orange-50 text-orange-600 dark:bg-orange-950/20' 
-                        : 'border-slate-100 dark:border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-3">Biotipo Físico</label>
+                  <div className="grid md:grid-cols-3 grid-cols-1 gap-3">
+                    {['Ectomorfo', 'Mesomorfo', 'Endomorfo'].map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setBiotipo(type)}
+                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                          biotipo === type 
+                          ? 'border-orange-600 bg-orange-50 text-orange-600 dark:bg-orange-950/20' 
+                          : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-medium mt-3 uppercase tracking-tighter">Essa informação será usada para sugestões personalizadas.</p>
                 </div>
-                <p className="text-[9px] text-slate-400 font-medium px-1 mt-2 uppercase tracking-tighter">Essa informação será a base para seu futuro plano de exercícios.</p>
               </div>
             </div>
 
-            <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
               <button 
                 onClick={handleUpdate}
                 disabled={loading}
-                className="px-10 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-orange-700 transition-all disabled:opacity-50"
+                className="flex-1 px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-lg hover:bg-orange-700 transition-all disabled:opacity-50 active:scale-95"
               >
-                {loading ? 'Sincronizando...' : 'Salvar Perfil Completo'}
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Assinatura and Sistema tabs follow the previous layout but ensure no italics */}
         {activeTab === 'assinatura' && (
           <div className="bg-orange-600 p-12 rounded-[2.5rem] relative overflow-hidden text-white animate-slide-up">
             <h3 className="text-4xl font-black tracking-tighter uppercase relative z-10">{user?.plano} PRO</h3>
-            <p className="text-orange-100 text-sm mt-4 opacity-90 max-w-sm leading-relaxed relative z-10">Sua assinatura está ativa. Aproveite o acesso completo sem itálicos.</p>
+            <p className="text-orange-100 text-sm mt-4 opacity-90 max-w-sm leading-relaxed relative z-10">Sua assinatura está ativa. Aproveite o acesso completo à plataforma.</p>
             <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
           </div>
         )}
 
         {activeTab === 'sistema' && (
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-10 rounded-4xl animate-slide-up">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest">Temas do Sistema</h4>
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-10 rounded-lg animate-slide-up">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest">Temas da Interface</h4>
             <div className="grid grid-cols-3 gap-6">
-              {['Light', 'Dark', 'System'].map(mode => (
+              {['light', 'dark', 'system'].map(mode => (
                 <button 
                   key={mode} 
-                  onClick={() => handleThemeChange(mode.toLowerCase() as any)}
-                  className={`py-6 border-2 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 ${
-                    user?.theme === mode.toLowerCase() 
+                  onClick={() => handleThemeChange(mode as any)}
+                  className={`py-6 border-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-all ${
+                    user?.theme === mode 
                       ? 'border-orange-600 bg-orange-50 dark:bg-orange-950/20 text-orange-600' 
-                      : 'border-slate-100 dark:border-slate-800 text-slate-400'
+                      : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-2xl">{mode === 'Light' ? 'light_mode' : mode === 'Dark' ? 'dark_mode' : 'settings_brightness'}</span>
-                  {mode}
+                  <span className="material-symbols-outlined text-2xl">{mode === 'light' ? 'light_mode' : mode === 'dark' ? 'dark_mode' : 'settings_brightness'}</span>
+                  {mode === 'light' ? 'Claro' : mode === 'dark' ? 'Escuro' : 'Sistema'}
                 </button>
               ))}
             </div>
@@ -178,14 +337,28 @@ const SettingsPage: React.FC = () => {
   );
 };
 
-const InputShadcn = ({ label, disabled, ...props }: any) => (
+interface InputFieldProps {
+  label: string;
+  value: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  type?: string;
+  error?: string;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ label, error, ...props }) => (
   <div className="space-y-2">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
     <input 
-      disabled={disabled}
-      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-600/10 transition-all dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+      className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl px-4 py-3 text-sm font-medium outline-none dark:text-white focus:ring-2 focus:ring-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+        error 
+          ? 'border-red-500 focus:ring-red-500' 
+          : 'border-slate-200 dark:border-slate-800'
+      }`}
       {...props}
     />
+    {error && <span className="text-[9px] text-red-500 font-bold">{error}</span>}
   </div>
 );
 

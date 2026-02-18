@@ -8,10 +8,43 @@ import { Periodo, Medicamento } from '../types';
 const OnboardingPage: React.FC = () => {
   const [step, setStep] = useState(1);
   const [glicemy, setGlicemy] = useState<number>(100);
+  const [glicemyError, setGlicemyError] = useState('');
+  const [showEmergencyAlert, setShowEmergencyAlert] = useState(false);
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
+  const handleGlicemyChange = (value: number) => {
+    setGlicemyError('');
+    setShowEmergencyAlert(false);
+
+    // Validar números negativos
+    if (value < 0) {
+      setGlicemyError('A glicemia não pode ser negativa');
+      return;
+    }
+
+    // Validar limite máximo
+    if (value > 500) {
+      setShowEmergencyAlert(true);
+      setGlicemyError('Valor crítico! Procure um médico imediatamente');
+      setGlicemy(value);
+      return;
+    }
+
+    setGlicemy(value);
+  };
+
   const handleFinish = async () => {
+    if (glicemy > 500) {
+      alert('⚠️ AVISO: Glicemia crítica!\n\nValor acima de 500 mg/dL\n\nProcure ajuda médica IMEDIATAMENTE:\n\n🚑 AMBULÂNCIA: 192\n🚨 RESGATE: 193\n\nNão prossiga sem atendimento médico!');
+      return;
+    }
+
+    if (glicemy < 0) {
+      alert('Valor de glicemia inválido');
+      return;
+    }
+
     await mockService.createRecord({
       periodo: Periodo.CAFE_MANHA,
       medicamento: Medicamento.NENHUM,
@@ -33,7 +66,7 @@ const OnboardingPage: React.FC = () => {
           {step === 1 ? (
             <div className="space-y-12 animate-slide-up">
               {/* Exemplo visual de Instalação */}
-              <div className="relative mx-auto w-full aspect-video bg-gradient-to-br from-orange-50 to-white dark:from-slate-900/40 dark:to-[#111121] rounded-4xl flex flex-col items-center justify-center border-2 border-orange-100 dark:border-orange-900/20 overflow-hidden">
+              <div className="relative mx-auto w-full aspect-video bg-gradient-to-br from-orange-50 to-white dark:from-slate-900/40 dark:to-[#111121] rounded-lg flex flex-col items-center justify-center border-2 border-orange-100 dark:border-orange-900/20 overflow-hidden">
                  <div className="absolute top-0 left-0 w-full h-1 bg-orange-600 animate-loading-bar"></div>
                  <span className="material-symbols-outlined text-[100px] text-orange-600 mb-4 animate-bounce">install_mobile</span>
                  <div className="flex gap-2">
@@ -53,14 +86,14 @@ const OnboardingPage: React.FC = () => {
 
               <button
                 onClick={() => setStep(2)}
-                className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all active:scale-95"
+                className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-lg hover:bg-orange-700 transition-all active:scale-95"
               >
                 Continuar Setup
               </button>
             </div>
           ) : (
             <div className="space-y-12 animate-slide-up">
-              <div className="relative mx-auto w-full aspect-video bg-slate-50 dark:bg-slate-900/50 rounded-4xl flex flex-col items-center justify-center border-2 border-slate-100 dark:border-slate-800">
+              <div className="relative mx-auto w-full aspect-video bg-slate-50 dark:bg-slate-900/50 rounded-lg flex flex-col items-center justify-center border-2 border-slate-100 dark:border-slate-800">
                  <span className="material-symbols-outlined text-7xl text-orange-600 mb-3 animate-pulse">query_stats</span>
                  <div className="flex gap-1.5">
                     {[1,2,3,4,5].map(i => <div key={i} className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/20 border border-orange-200/50"></div>)}
@@ -79,19 +112,52 @@ const OnboardingPage: React.FC = () => {
                   <input
                     type="number"
                     value={glicemy || ''}
-                    onChange={(e) => setGlicemy(Number(e.target.value))}
-                    className="w-full text-center text-8xl font-black bg-transparent border-none outline-none dark:text-white text-orange-600 selection:bg-orange-100"
+                    onChange={(e) => handleGlicemyChange(Number(e.target.value))}
+                    className={`w-full text-center text-8xl font-black bg-transparent border-none outline-none dark:text-white transition-colors ${
+                      glicemyError ? 'text-red-600' : 'text-orange-600'
+                    } selection:bg-orange-100`}
                     autoFocus
                   />
-                  <div className="text-[14px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4">mg/dL</div>
+                  <div className={`text-[14px] font-black uppercase tracking-[0.3em] mt-4 ${
+                    glicemyError ? 'text-red-500' : 'text-slate-400'
+                  }`}>
+                    {glicemyError ? '⚠️ ' + glicemyError : 'mg/dL'}
+                  </div>
                 </div>
               </div>
+
+              {/* Alerta de Emergência */}
+              {showEmergencyAlert && (
+                <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6 animate-pulse space-y-3">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-red-600 text-3xl">emergency</span>
+                    <p className="text-red-600 font-black uppercase text-sm tracking-wider">ALERTA CRÍTICO</p>
+                  </div>
+                  <p className="text-red-700 dark:text-red-300 font-bold text-base leading-relaxed">
+                    Glicemia acima de 500 mg/dL é um nível crítico!
+                  </p>
+                  <div className="space-y-2 pt-2 border-t-2 border-red-200 dark:border-red-800">
+                    <p className="text-slate-700 dark:text-slate-300 text-sm font-semibold">Procure atendimento médico imediatamente:</p>
+                    <div className="flex gap-4 justify-center">
+                      <div className="text-center">
+                        <p className="text-red-600 font-black text-xl">192</p>
+                        <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Ambulância</p>
+                      </div>
+                      <div className="w-px bg-red-300 dark:bg-red-700"></div>
+                      <div className="text-center">
+                        <p className="text-red-600 font-black text-xl">193</p>
+                        <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Resgate</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-4">
                 <button
                   onClick={handleFinish}
-                  disabled={!glicemy}
-                  className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all disabled:opacity-50 active:scale-95"
+                  disabled={!glicemy || glicemyError !== ''}
+                  className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-lg hover:bg-orange-700 transition-all disabled:opacity-50 active:scale-95"
                 >
                   Ativar Painel
                 </button>

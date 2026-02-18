@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
+import { NavLink } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { mockService } from '../services/mockService';
 import { GlucoseRecord } from '../types';
@@ -171,8 +172,16 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <div className="md:col-span-4 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] flex flex-col">
-          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
+            <NavLink
+              to="/registros"
+              className="text-orange-600 hover:text-orange-700 dark:text-orange-500 dark:hover:text-orange-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded px-2 py-1"
+              aria-label="Ver todos os registros"
+              title="Ver todos os registros"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_outward</span>
+            </NavLink>
           </div>
           <div className="p-8 flex-1">
             <div className="space-y-6">

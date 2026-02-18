@@ -144,7 +144,7 @@ const App: React.FC = () => {
             <div className="bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[100] border-b border-orange-500/30">
               <span className="material-symbols-outlined text-orange-500 animate-pulse text-[20px]">cloud_off</span>
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
-                Você está offline. <span className="text-orange-400">Dados serão sincronizados</span> ao retornar.
+                Você está offline. <span className="text-orange-400">Os dados serão sincronizados</span> ao retornar.
               </p>
             </div>
           )}
@@ -183,9 +183,9 @@ const App: React.FC = () => {
                       <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3" aria-hidden="true">
-                            <span className="material-symbols-outlined text-white text-[18px] font-bold">bloodtype</span>
+                            <span className="material-symbols-outlined text-white text-[20px] font-bold">bloodtype</span>
                           </div>
-                          <span className="font-black text-base tracking-tighter uppercase">GlicoSIM</span>
+                          <span className="font-black text-base uppercase">Glico<span className="text-orange-600">SIM</span></span>
                         </div>
                         <NavLink 
                           to="/ajustes" 

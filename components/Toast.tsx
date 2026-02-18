@@ -30,16 +30,16 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
   return (
     <div className={`
       flex items-center gap-3 
-      px-5 py-4 
-      rounded-2xl border
+      px-5 py-3 
+      rounded-lg border
       backdrop-blur-sm
       animate-slide-in-right
       ${styles[type]}
-    `}>
+    >`}
       <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
         {icons[type]}
       </span>
-      <p className="text-sm font-bold flex-1">{message}</p>
+      <p className="text-xs font-bold flex-1">{message}</p>
       <button
         onClick={onClose}
         className="text-current opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-1 rounded"

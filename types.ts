@@ -23,7 +23,9 @@ export interface UserProfile {
   id: string;
   nome: string;
   email: string;
+  cpf?: string;
   whatsapp?: string;
+  bio?: string;
   dataNascimento?: string;
   peso?: number;
   altura?: number;
