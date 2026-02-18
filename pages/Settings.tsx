@@ -54,7 +54,7 @@ const SettingsPage: React.FC = () => {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap ${
               activeTab === tab.id 
-              ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm' 
+              ? 'bg-white dark:bg-slate-700 text-orange-600' 
               : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
@@ -65,7 +65,7 @@ const SettingsPage: React.FC = () => {
 
       <div className="max-w-4xl pt-2">
         {activeTab === 'perfil' && (
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-sm space-y-10 animate-slide-up">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl space-y-10 animate-slide-up">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-2xl font-black text-orange-600 border border-orange-100 dark:border-orange-900/30">
                 {user?.nome?.[0] || 'U'}
@@ -114,7 +114,7 @@ const SettingsPage: React.FC = () => {
                       onClick={() => setBiotipo(type)}
                       className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
                         biotipo === type 
-                        ? 'border-orange-600 bg-orange-50 text-orange-600 dark:bg-orange-950/20 shadow-md' 
+                        ? 'border-orange-600 bg-orange-50 text-orange-600 dark:bg-orange-950/20' 
                         : 'border-slate-100 dark:border-slate-800 text-slate-400'
                       }`}
                     >
@@ -130,7 +130,7 @@ const SettingsPage: React.FC = () => {
               <button 
                 onClick={handleUpdate}
                 disabled={loading}
-                className="px-10 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-500/30 disabled:opacity-50"
+                className="px-10 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-orange-700 transition-all disabled:opacity-50"
               >
                 {loading ? 'Sincronizando...' : 'Salvar Perfil Completo'}
               </button>
@@ -140,7 +140,7 @@ const SettingsPage: React.FC = () => {
 
         {/* Assinatura and Sistema tabs follow the previous layout but ensure no italics */}
         {activeTab === 'assinatura' && (
-          <div className="bg-orange-600 p-12 rounded-[2.5rem] relative overflow-hidden text-white shadow-2xl animate-slide-up">
+          <div className="bg-orange-600 p-12 rounded-[2.5rem] relative overflow-hidden text-white animate-slide-up">
             <h3 className="text-4xl font-black tracking-tighter uppercase relative z-10">{user?.plano} PRO</h3>
             <p className="text-orange-100 text-sm mt-4 opacity-90 max-w-sm leading-relaxed relative z-10">Sua assinatura está ativa. Aproveite o acesso completo sem itálicos.</p>
             <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
@@ -148,7 +148,7 @@ const SettingsPage: React.FC = () => {
         )}
 
         {activeTab === 'sistema' && (
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-10 rounded-4xl shadow-sm animate-slide-up">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-10 rounded-4xl animate-slide-up">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest">Temas do Sistema</h4>
             <div className="grid grid-cols-3 gap-6">
               {['Light', 'Dark', 'System'].map(mode => (

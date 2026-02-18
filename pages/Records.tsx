@@ -311,7 +311,7 @@ const RecordsPage: React.FC = () => {
       )}
       <div className="fixed inset-0 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-4">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-4 px-10 py-6 rounded-[2.5rem] shadow-2xl border animate-toast-in ${
+          <div key={t.id} className={`pointer-events-auto flex items-center gap-4 px-10 py-6 rounded-[2.5rem] border animate-toast-in ${
             t.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 
             t.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 
             'bg-slate-900 border-slate-700 text-white'
@@ -337,7 +337,7 @@ const RecordsPage: React.FC = () => {
           </button>
           <button 
             onClick={exportToPDF}
-            className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95 shadow-lg shadow-orange-500/20"
+            className="flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
             Gerar PDF
@@ -498,7 +498,7 @@ const RecordsPage: React.FC = () => {
 
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-6">
-          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[3rem] p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800 shadow-2xl">
+          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-[3rem] p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
             <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <span className="material-symbols-outlined text-4xl">warning</span>
             </div>
@@ -514,7 +514,7 @@ const RecordsPage: React.FC = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-0">
-          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-4xl shadow-2xl overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
+          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-4xl overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Registro</h3>
               <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">

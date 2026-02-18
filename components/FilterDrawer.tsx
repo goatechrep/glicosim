@@ -84,7 +84,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose, filters, o
                     py-3 px-4 rounded-xl text-sm font-bold transition-all
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500
                     ${localFilters.periodo === periodo
-                      ? 'bg-orange-600 text-white shadow-lg'
+                      ? 'bg-orange-600 text-white'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }
                   `}
@@ -139,7 +139,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose, filters, o
             </button>
             <button
               onClick={handleApply}
-              className="flex-1 py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-sm shadow-lg shadow-orange-500/30 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+              className="flex-1 py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             >
               Aplicar
             </button>

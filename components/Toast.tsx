@@ -31,7 +31,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }
     <div className={`
       flex items-center gap-3 
       px-5 py-4 
-      rounded-2xl border shadow-lg
+      rounded-2xl border
       backdrop-blur-sm
       animate-slide-in-right
       ${styles[type]}

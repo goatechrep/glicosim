@@ -28,12 +28,12 @@ const OnboardingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#111121] flex items-center justify-center p-6 font-sans">
       <div className="max-w-xl w-full">
-        <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-12 rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] text-center animate-fade-in relative overflow-hidden">
+        <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-12 rounded-[3.5rem] text-center animate-fade-in relative overflow-hidden">
           
           {step === 1 ? (
             <div className="space-y-12 animate-slide-up">
               {/* Exemplo visual de Instalação */}
-              <div className="relative mx-auto w-full aspect-video bg-gradient-to-br from-orange-50 to-white dark:from-slate-900/40 dark:to-[#111121] rounded-4xl flex flex-col items-center justify-center border-2 border-orange-100 dark:border-orange-900/20 overflow-hidden shadow-inner">
+              <div className="relative mx-auto w-full aspect-video bg-gradient-to-br from-orange-50 to-white dark:from-slate-900/40 dark:to-[#111121] rounded-4xl flex flex-col items-center justify-center border-2 border-orange-100 dark:border-orange-900/20 overflow-hidden">
                  <div className="absolute top-0 left-0 w-full h-1 bg-orange-600 animate-loading-bar"></div>
                  <span className="material-symbols-outlined text-[100px] text-orange-600 mb-4 animate-bounce">install_mobile</span>
                  <div className="flex gap-2">
@@ -53,14 +53,14 @@ const OnboardingPage: React.FC = () => {
 
               <button
                 onClick={() => setStep(2)}
-                className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-500/20 active:scale-95"
+                className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all active:scale-95"
               >
                 Continuar Setup
               </button>
             </div>
           ) : (
             <div className="space-y-12 animate-slide-up">
-              <div className="relative mx-auto w-full aspect-video bg-slate-50 dark:bg-slate-900/50 rounded-4xl flex flex-col items-center justify-center border-2 border-slate-100 dark:border-slate-800 shadow-inner">
+              <div className="relative mx-auto w-full aspect-video bg-slate-50 dark:bg-slate-900/50 rounded-4xl flex flex-col items-center justify-center border-2 border-slate-100 dark:border-slate-800">
                  <span className="material-symbols-outlined text-7xl text-orange-600 mb-3 animate-pulse">query_stats</span>
                  <div className="flex gap-1.5">
                     {[1,2,3,4,5].map(i => <div key={i} className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/20 border border-orange-200/50"></div>)}
@@ -91,7 +91,7 @@ const OnboardingPage: React.FC = () => {
                 <button
                   onClick={handleFinish}
                   disabled={!glicemy}
-                  className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-500/30 disabled:opacity-50 active:scale-95"
+                  className="w-full py-6 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-3xl hover:bg-orange-700 transition-all disabled:opacity-50 active:scale-95"
                 >
                   Ativar Painel
                 </button>

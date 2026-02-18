@@ -210,7 +210,7 @@ const App: React.FC = () => {
 
                       {/* Fixed Mobile Bottom Navigation */}
                       <nav 
-                        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-6"
+                        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-4"
                         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
                         aria-label="Menu de navegação principal"
                       >
@@ -223,7 +223,7 @@ const App: React.FC = () => {
                         <div className="relative w-[20%] flex justify-center">
                           <Link 
                             to="/registros?new=true"
-                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(234,88,12,0.4)] border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                             aria-label="Adicionar novo registro"
                           >
                             <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">add</span>

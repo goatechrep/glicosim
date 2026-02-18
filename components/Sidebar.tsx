@@ -22,7 +22,7 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="w-72 h-screen bg-white dark:bg-[#111121] flex flex-col border-r border-slate-200 dark:border-slate-800/60 p-6 sticky top-0">
       <div className="px-2 py-8 flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 rotate-3 transition-transform hover:rotate-0">
+        <div className="w-10 h-10 bg-orange-600 rounded-2xl flex items-center justify-center rotate-3 transition-transform hover:rotate-0">
           <span className="material-symbols-outlined text-white text-[24px] font-bold">bloodtype</span>
         </div>
         <div>
@@ -42,7 +42,7 @@ const Sidebar: React.FC = () => {
                 `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                   isActive
-                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm active'
+                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
                 }`
               }

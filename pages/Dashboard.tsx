@@ -70,7 +70,7 @@ const DashboardPage: React.FC = () => {
           <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Olá, {user?.nome?.split(' ')[0] || 'Usuário'}!</h2>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
         </div>
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20 shadow-sm">
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20">
            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
            <span className="text-[10px] font-black uppercase tracking-widest">Sincronizado</span>
         </div>
@@ -84,7 +84,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <div className="grid gap-8 md:grid-cols-12 pb-24 md:pb-0">
-        <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm overflow-hidden flex flex-col">
+        <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência de Glicemia</h3>
             
@@ -98,7 +98,7 @@ const DashboardPage: React.FC = () => {
                     transition-all duration-200
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-1
                     ${period === option.value
-                      ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-orange-600'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                     }
                   `}
@@ -170,7 +170,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="md:col-span-4 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] shadow-sm flex flex-col">
+        <div className="md:col-span-4 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
           </div>
@@ -179,7 +179,7 @@ const DashboardPage: React.FC = () => {
               {records.slice(0, 5).map(record => (
                 <div key={record.id} className="flex items-center justify-between group">
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all shadow-sm">
+                    <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
                        <span className="material-symbols-outlined text-[22px]">water_drop</span>
                     </div>
                     <div className="flex flex-col">
@@ -216,7 +216,6 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
     rounded-3xl border border-slate-200 dark:border-slate-800/80 
     bg-white dark:bg-[#111121] 
     p-7 
-    shadow-sm hover:shadow-2xl hover:shadow-orange-500/10
     transition-all duration-300 ease-out
     hover:-translate-y-1
   ">
@@ -237,7 +236,6 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
           group-hover:scale-110
           group-hover:rotate-3
           transition-all duration-300
-          shadow-sm
         ">
           <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{icon}</span>
         </div>
@@ -249,7 +247,6 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
             border border-emerald-200 dark:border-emerald-800
             rounded-lg 
             text-[9px] font-black uppercase tracking-wider
-            shadow-sm
           ">
             {trend}
           </span>

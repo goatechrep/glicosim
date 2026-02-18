@@ -20,7 +20,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
       bg-white dark:bg-[#111121] 
       border border-slate-200 dark:border-slate-800 
       rounded-2xl p-5 
-      hover:shadow-lg transition-all duration-300
+      transition-all duration-300
       active:scale-[0.98]
     ">
       {/* Header com data e ações */}

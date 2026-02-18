@@ -34,8 +34,7 @@ const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary: `
-      bg-orange-600 text-white hover:bg-orange-700 
-      shadow-md hover:shadow-lg hover:shadow-orange-500/30
+      bg-orange-600 text-white hover:bg-orange-700
     `,
     secondary: `
       bg-slate-100 text-slate-900 hover:bg-slate-200
@@ -48,7 +47,6 @@ const Button: React.FC<ButtonProps> = ({
     `,
     danger: `
       bg-red-600 text-white hover:bg-red-700
-      shadow-md hover:shadow-lg hover:shadow-red-500/30
     `,
   };
 
