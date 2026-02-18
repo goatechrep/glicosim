@@ -74,12 +74,19 @@ export const supabaseService = {
 
     // Atualizar último login
     if (data.user) {
+      const userProfile = await supabaseService.getUser(data.user.id);
+      if (!userProfile) {
+        // Deslogar o usuário e lançar erro
+        await supabaseClient.auth.signOut();
+        throw new Error('Perfil do usuário não encontrado. Crie uma conta e complete o processo de inicial.');
+      }
+
+      // Atualizar último login apenas se o perfil existir
       await supabaseClient
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
     }
-
     return data;
   },
 
