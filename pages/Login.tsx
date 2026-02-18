@@ -19,6 +19,8 @@ const LoginPage: React.FC = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [forgotCooldown, setForgotCooldown] = useState(0);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -62,6 +64,22 @@ const LoginPage: React.FC = () => {
 
   const passwordStrength = calculatePasswordStrength(password);
 
+  // Timer de cooldown para formulário principal
+  React.useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
+  // Timer de cooldown para recuperação de senha
+  React.useEffect(() => {
+    if (forgotCooldown > 0) {
+      const timer = setTimeout(() => setForgotCooldown(forgotCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [forgotCooldown]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -72,6 +90,12 @@ const LoginPage: React.FC = () => {
     }
     setEmailError('');
     setGeneralError('');
+
+    // Verificar cooldown
+    if (cooldown > 0) {
+      setGeneralError(`Aguarde ${cooldown}s antes de tentar novamente`);
+      return;
+    }
 
     // Validar senha no registro
     if (activeTab === 'register' && passwordStrength === 'fraco') {
@@ -91,11 +115,15 @@ const LoginPage: React.FC = () => {
         }
         
         await supabaseService.signUp(email, password, name);
+        // Iniciar cooldown após sucesso
+        setCooldown(30);
         // Após signup, redirecionar para onboarding
         navigate('/onboarding');
       } else {
         // Fazer login
         await login(email, password);
+        // Iniciar cooldown após sucesso
+        setCooldown(30);
         // O listener do AuthProvider vai atualizar o user e redirecionar para a home
         // Aqui não precisamos navegar manualmente
       }
@@ -111,6 +139,9 @@ const LoginPage: React.FC = () => {
         setGeneralError('Sua conta existe, mas o perfil não foi encontrado. Tente criar uma nova conta.');
       } else if (error.message.includes('Email not confirmed')) {
         setGeneralError('Por favor, confirme seu email antes de fazer login');
+      } else if (error.message.includes('rate_limit')) {
+        setGeneralError('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.');
+        setCooldown(60);
       } else {
         setGeneralError(error.message || 'Erro ao processar sua solicitação. Tente novamente.');
       }
@@ -127,10 +158,17 @@ const LoginPage: React.FC = () => {
       return;
     }
 
+    // Verificar cooldown
+    if (forgotCooldown > 0) {
+      alert(`Aguarde ${forgotCooldown}s antes de tentar novamente`);
+      return;
+    }
+
     setForgotLoading(true);
     await new Promise(r => setTimeout(r, 1500));
     setForgotLoading(false);
     setForgotSuccess(true);
+    setForgotCooldown(60);
     
     setTimeout(() => {
       setShowForgotModal(false);
@@ -276,10 +314,12 @@ const LoginPage: React.FC = () => {
 
               <button 
                 type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-orange-700 transition-all active:scale-[0.98] disabled:opacity-70 mt-4"
+                disabled={isLoading || cooldown > 0}
+                className="w-full py-3.5 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-orange-700 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed mt-4"
               >
-                {isLoading 
+                {cooldown > 0
+                  ? `Aguarde ${cooldown}s...`
+                  : isLoading 
                   ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> AGUARDE...</span> 
                   : activeTab === 'login' ? 'Acessar Painel' : 'Criar minha Conta'
                 }
@@ -339,10 +379,12 @@ const LoginPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={forgotLoading}
-                  className="w-full py-3 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.1em] rounded-xl hover:bg-orange-700 transition-all active:scale-[0.98] disabled:opacity-70 mt-6"
+                  disabled={forgotLoading || forgotCooldown > 0}
+                  className="w-full py-3 bg-orange-600 text-white font-black text-xs uppercase tracking-[0.1em] rounded-xl hover:bg-orange-700 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed mt-6"
                 >
-                  {forgotLoading ? (
+                  {forgotCooldown > 0 ? (
+                    `Aguarde ${forgotCooldown}s...`
+                  ) : forgotLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       ENVIANDO...
