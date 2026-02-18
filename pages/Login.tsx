@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import { supabaseService } from '../services/supabaseService';
 
 type PasswordStrength = 'fraco' | 'medio' | 'forte' | 'muito-forte';
 
@@ -13,6 +14,7 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [generalError, setGeneralError] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -69,25 +71,52 @@ const LoginPage: React.FC = () => {
       return;
     }
     setEmailError('');
+    setGeneralError('');
 
     // Validar senha no registro
     if (activeTab === 'register' && passwordStrength === 'fraco') {
-      alert('A senha é muito fraca. Use letras maiúsculas, minúsculas, números e símbolos.');
+      setGeneralError('A senha é muito fraca. Use letras maiúsculas, minúsculas, números e símbolos.');
       return;
     }
 
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 800));
     
-    const userData = { 
-      nome: activeTab === 'login' ? email.split('@')[0] : name, 
-      email,
-      isOnboarded: activeTab === 'login'
-    };
-    
-    await login(userData);
-    setIsLoading(false);
-    navigate('/');
+    try {
+      if (activeTab === 'register') {
+        // Criar nova conta
+        if (!name.trim()) {
+          setGeneralError('Por favor, insira um nome');
+          setIsLoading(false);
+          return;
+        }
+        
+        await supabaseService.signUp(email, password, name);
+        // Após signup, redirecionar para onboarding
+        navigate('/onboarding');
+      } else {
+        // Fazer login
+        await login(email, password);
+        // O listener do AuthProvider vai atualizar o user e redirecionar para a home
+        // Aqui não precisamos navegar manualmente
+      }
+    } catch (error: any) {
+      console.error('Erro durante autenticação:', error);
+      
+      // Mensagens de erro mais amigáveis
+      if (error.message.includes('Invalid login credentials')) {
+        setGeneralError('Email ou senha incorretos');
+      } else if (error.message.includes('User already registered')) {
+        setGeneralError('Este email já está cadastrado');
+      } else if (error.message.includes('Perfil do usuário não encontrado')) {
+        setGeneralError('Sua conta existe, mas o perfil não foi encontrado. Tente criar uma nova conta.');
+      } else if (error.message.includes('Email not confirmed')) {
+        setGeneralError('Por favor, confirme seu email antes de fazer login');
+      } else {
+        setGeneralError(error.message || 'Erro ao processar sua solicitação. Tente novamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -118,8 +147,8 @@ const LoginPage: React.FC = () => {
            <div className="w-16 h-16 bg-orange-600 rounded-lg flex items-center justify-center mx-auto mb-4 transform rotate-3">
               <span className="material-symbols-outlined text-white text-4xl">bloodtype</span>
            </div>
-           <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white uppercase">GlicoSIM</h1>
-           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle inteligente para uma vida plena.</p>
+           <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Glico<span className="text-orange-600">SIM</span></h1>
+           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle sua glicemia todo dia.</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-lg overflow-hidden">
@@ -149,6 +178,12 @@ const LoginPage: React.FC = () => {
 
           <div className="px-6 pb-6 pt-2">
             <form className="space-y-5" onSubmit={handleSubmit}>
+              {generalError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-3">
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5">error</span>
+                  <p className="text-sm text-red-700 dark:text-red-300 font-medium">{generalError}</p>
+                </div>
+              )}
               {activeTab === 'register' && (
                 <div className="space-y-1.5 animate-slide-up">
                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>

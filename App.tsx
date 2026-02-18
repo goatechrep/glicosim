@@ -2,7 +2,7 @@
 import React, { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, NavLink, Link } from 'react-router-dom';
 import { UserProfile } from './types';
-import { mockService } from './services/mockService';
+import { supabaseService, supabaseClient } from './services/supabaseService';
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('./pages/Login'));
@@ -35,7 +35,7 @@ const LazyPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
-  login: (userData: Partial<UserProfile>) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -54,64 +54,39 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      // Verificar se há dados no localStorage
-      const hasLocalData = localStorage.getItem('glicosim_data');
-      
-      if (!hasLocalData) {
-        // Sem dados no localStorage = sessão inválida
-        console.warn('❌ Nenhum dado no localStorage. Deslogando usuário...');
-        setSessionExpired(true);
+    // Monitorar mudanças de estado de autenticação do Supabase
+    const { data: { subscription } } = supabaseClient!.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          // Usuário autenticado - buscar perfil
+          try {
+            const userProfile = await supabaseService.getUser(session.user.id);
+            if (!userProfile) {
+              // Perfil não existe no banco - deslogar
+              console.warn('❌ Perfil do usuário não encontrado. Deslogando...');
+              await supabaseService.signOut();
+              setUser(null);
+              setSessionExpired(true);
+            } else {
+              setUser(userProfile);
+              setSessionExpired(false);
+            }
+          } catch (error) {
+            console.error('Erro ao buscar perfil:', error);
+            setUser(null);
+            setSessionExpired(true);
+          }
+        } else {
+          // Sem sessão
+          setUser(null);
+          setSessionExpired(event === 'SIGNED_OUT');
+        }
         setLoading(false);
-        return;
       }
+    );
 
-      const storedUser = await mockService.getUser();
-      
-      if (!storedUser) {
-        // Usuário não encontrado = sessão inválida
-        console.warn('❌ Usuário não encontrado. Deslogando...');
-        setSessionExpired(true);
-        setLoading(false);
-        return;
-      }
-
-      setUser(storedUser);
-      setLoading(false);
-    };
-    init();
+    return () => subscription.unsubscribe();
   }, []);
-
-  // Monitorar mudanças no localStorage em tempo real
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'glicosim_data' && e.newValue === null) {
-        // Dados foram deletados em outra aba/sessão
-        console.warn('❌ Dados deletados em outra sessão. Deslogando...');
-        setUser(null);
-        setSessionExpired(true);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Verificação periódica (a cada 30s) para confirmar se dados existem
-  useEffect(() => {
-    if (!user) return;
-
-    const interval = setInterval(() => {
-      const hasLocalData = localStorage.getItem('glicosim_data');
-      if (!hasLocalData) {
-        console.warn('❌ Dados não encontrados em verificação periódica. Deslogando...');
-        setUser(null);
-        setSessionExpired(true);
-      }
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(interval);
-  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -132,34 +107,29 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     applyTheme(user.theme);
   }, [user?.theme]);
 
-  const login = async (userData: Partial<UserProfile>) => {
-    const newUser = await mockService.createUser(userData);
-    setUser(newUser);
-    setSessionExpired(false);
+  const login = async (email: string, password: string) => {
+    await supabaseService.signIn(email, password);
+    // o novo usuário será atualizado pelo listener onAuthStateChange
   };
 
   const logout = () => {
-    mockService.deleteUser();
+    supabaseService.signOut();
     setUser(null);
-    setSessionExpired(false);
   };
 
   const refreshUser = async () => {
-    const hasLocalData = localStorage.getItem('glicosim_data');
-    if (!hasLocalData) {
-      // Dados foram deletados - deslogar
+    const currentUser = await supabaseService.getCurrentUser();
+    if (currentUser) {
+      const userProfile = await supabaseService.getUser(currentUser.id);
+      if (userProfile) {
+        setUser(userProfile);
+      } else {
+        setUser(null);
+        setSessionExpired(true);
+      }
+    } else {
       setUser(null);
-      setSessionExpired(true);
-      return;
     }
-
-    const updatedUser = await mockService.getUser();
-    if (!updatedUser) {
-      setUser(null);
-      setSessionExpired(true);
-      return;
-    }
-    setUser(updatedUser);
   };
 
   return (

@@ -13,6 +13,8 @@ const supabaseClient = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
+export { supabaseClient };
+
 interface SupabaseUser {
   id: string;
   email: string;
