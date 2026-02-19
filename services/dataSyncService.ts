@@ -57,7 +57,7 @@ export const dataSyncService = {
       console.log('📦 Exportando dados do usuário...');
 
       // Obter dados do localStorage ou Supabase
-      let userData: any = {};
+      let userData: any [] = [];
       let records: any[] = [];
       let alerts: any[] = [];
 
@@ -68,21 +68,21 @@ export const dataSyncService = {
           const userRecords = await supabaseService.getRecords(userId);
           const userAlerts = await supabaseService.getAlerts(userId);
 
-          userData = user;
+          userData = user[0];
           records = userRecords;
           alerts = userAlerts;
         } catch (error) {
           console.warn('⚠️ Erro ao buscar dados do Supabase, usando localStorage:', error);
           // Fallback para localStorage
           const backup = dataSyncService.getLocalBackup();
-          userData = backup?.user || {};
+          userData = backup?.user || [];
           records = backup?.records || [];
           alerts = backup?.alerts || [];
         }
       } else {
         // Se não é PRO, pega do localStorage
         const backup = dataSyncService.getLocalBackup();
-        userData = backup?.user || {};
+        userData = backup?.user || [];
         records = backup?.records || [];
         alerts = backup?.alerts || [];
       }
