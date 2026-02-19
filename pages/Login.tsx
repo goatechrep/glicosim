@@ -9,9 +9,9 @@ type PasswordStrength = 'fraco' | 'medio' | 'forte' | 'muito-forte';
 const LoginPage: React.FC = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('dolwebdesign@hotmail.com');
-  const [name, setName] = useState('Diogo Lins');
-  const [password, setPassword] = useState('Dol40sk8@');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
