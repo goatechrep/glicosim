@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import('./pages/Login'));
 const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const RecordsPage = lazy(() => import('./pages/Records'));
+const MedicationsPage = lazy(() => import('./pages/Medications'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const AlertsPage = lazy(() => import('./pages/Alerts'));
 
@@ -60,6 +61,24 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const checkSession = async () => {
       try {
         console.log('🔍 Verificando sessão inicial...');
+        
+        // Primeiro tentar carregar do localStorage (offline-first)
+        const localUser = localStorage.getItem('glicosim_user');
+        if (localUser) {
+          try {
+            const userData = JSON.parse(localUser);
+            console.log('✅ Usuário carregado do localStorage');
+            if (mounted) {
+              setUser(userData);
+              setLoading(false);
+            }
+            return;
+          } catch (e) {
+            localStorage.removeItem('glicosim_user');
+          }
+        }
+        
+        // Se não tiver no localStorage, tentar do Supabase
         const { data: { session } } = await supabaseClient!.auth.getSession();
         
         if (!mounted) return;
@@ -68,7 +87,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           console.log('✅ Sessão encontrada:', session.user.id);
           const userProfile = await supabaseService.getUser(session.user.id);
           if (userProfile && mounted) {
-            console.log('✅ Perfil carregado:', userProfile.nome);
+            console.log('✅ Perfil carregado do Supabase');
+            localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
             setUser(userProfile);
           }
         } else {
@@ -106,6 +126,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               setSessionExpired(true);
             } else {
               console.log('✅ Perfil encontrado:', userProfile.nome, 'Onboarded:', userProfile.isOnboarded);
+              localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
               setUser(userProfile);
               setSessionExpired(false);
             }
@@ -156,6 +177,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const logout = () => {
     supabaseService.signOut();
+    localStorage.removeItem('glicosim_user');
     setUser(null);
   };
 
@@ -164,6 +186,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (currentUser) {
       const userProfile = await supabaseService.getUser(currentUser.id);
       if (userProfile) {
+        localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
         setUser(userProfile);
       } else {
         setUser(null);
@@ -327,6 +350,7 @@ const App: React.FC = () => {
                           <Routes>
                             <Route path="/" element={<DashboardPage />} />
                             <Route path="/registros" element={<RecordsPage />} />
+                            <Route path="/medicamentos" element={<MedicationsPage />} />
                             <Route path="/alertas" element={<AlertsPage />} />
                             <Route path="/ajustes" element={<SettingsPage />} />
                             <Route path="*" element={<Navigate to="/" />} />

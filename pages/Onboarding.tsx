@@ -56,40 +56,27 @@ const OnboardingPage: React.FC = () => {
       const userPlan = user.isPro ? 'PRO' : 'FREE';
       console.log(`Finalizando onboarding para usuário ${user.id} com plano ${userPlan} e glicemia inicial de ${glicemy} mg/dL...`);
 
-      if (userPlan === 'PRO') {
-        await supabaseService.createRecord({
-          periodo: Periodo.CAFE_MANHA,
-          medicamento: Medicamento.NENHUM,
-          antesRefeicao: glicemy,
-          aposRefeicao: 0,
-          dose: '0',
-          notes: 'Setup inicial realizado com sucesso.',
-          data: new Date().toISOString().split('T')[0]
-        });
-      }
+      const recordData = {
+        id: Date.now().toString(),
+        userId: user.id,
+        periodo: Periodo.CAFE_MANHA,
+        medicamento: Medicamento.NENHUM,
+        antesRefeicao: glicemy,
+        aposRefeicao: 0,
+        dose: '0',
+        notes: 'Setup inicial realizado com sucesso.',
+        data: new Date().toISOString().split('T')[0],
+        timestamp: Date.now()
+      };
+
+      console.log('💾 Salvando registro:', recordData);
+      await dataSyncService.saveRecord(recordData);
+      
+      console.log('💾 Verificando localStorage:', localStorage.getItem('glicosim_data_backup'));
 
       const localData = {
-        user: [{
-          id: user.id,
-          nome: user.nome,
-          email: user.email,
-          cpf: user.cpf || '',
-          whatsapp: user.whatsapp || '',
-          bio: user.bio || '',
-          foto_url: user.foto_url || '',
-          peso: user.peso || null,
-          altura: user.altura || null,
-          biotipo: user.biotipo || '',
-          data_nascimento: user.data_nascimento || '',
-          localizacao: user.localizacao || '',
-          plano: userPlan,
-          is_onboarded: true,
-          theme: 'dark',
-          notifications: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }],
-        records: [],
+        user: [user],
+        records: [recordData],
         alerts: [],
         exportedAt: new Date().toISOString(),
         version: '1.0.0'

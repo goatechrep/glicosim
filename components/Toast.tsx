@@ -54,8 +54,8 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 4000 }
       {/* Toast centralizado */}
       <div className={`
         fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999]
-        flex flex-col items-center gap-6
-        px-8 py-7
+        flex flex-col items-center justify-center gap-6
+        px-8 py-7 min-w-[320px] max-w-md
         rounded-2xl border-2
         shadow-2xl
         animate-scale-fade-in

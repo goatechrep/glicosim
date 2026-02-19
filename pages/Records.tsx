@@ -9,6 +9,8 @@ import RecordCard from '../components/RecordCard';
 import FilterDrawer from '../components/FilterDrawer';
 import useDebounce from '../hooks/useDebounce';
 import Button from '../components/Button';
+import { medicationService } from '../services/medicationService';
+import { reminderService } from '../services/reminderService';
 
 interface Toast {
   message: string;
@@ -31,6 +33,7 @@ const RecordsPage: React.FC = () => {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [showDeleteMultipleModal, setShowDeleteMultipleModal] = useState(false);
+  const [medications, setMedications] = useState<any[]>([]);
 
   const [filterPeriodo, setFilterPeriodo] = useState<string>('Todos');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
@@ -45,12 +48,23 @@ const RecordsPage: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
     periodo: Periodo.CAFE_MANHA,
-    medicamento: Medicamento.NENHUM,
-    antesRefeicao: 100,
+    medicamento: '',
+    antesRefeicao: 0,
+    aposRefeicao: 0,
     dose: '0',
     notes: '',
     data: new Date().toISOString().split('T')[0]
   });
+
+  const [horario, setHorario] = useState<string>('08:00');
+
+  const periodoHorarios = {
+    [Periodo.CAFE_MANHA]: '08:00',
+    [Periodo.ALMOCO]: '12:00',
+    [Periodo.LANCHE]: '16:00',
+    [Periodo.JANTAR]: '19:00',
+    'Ao Deitar': '22:00'
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -71,7 +85,16 @@ const RecordsPage: React.FC = () => {
     }
   }, [location.search, navigate]);
 
-  useEffect(() => { loadRecords(); }, []);
+  useEffect(() => { 
+    loadRecords();
+    setMedications(medicationService.getMedications());
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setMedications(medicationService.getMedications());
+    }
+  }, [isModalOpen]);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -280,13 +303,30 @@ const RecordsPage: React.FC = () => {
     const dataToSave = { ...formData, dose: finalDose };
 
     try {
+      let savedRecordId = editingId;
       if (editingId) {
         await mockService.updateRecord(editingId, dataToSave);
         addToast("Registro atualizado!");
       } else {
-        await mockService.createRecord(dataToSave as any);
+        const newRecord = await mockService.createRecord(dataToSave as any);
+        savedRecordId = newRecord.id;
         addToast("Medição salva com sucesso!");
       }
+      
+      // Criar lembrete se 2h após não preenchido
+      if (formData.periodo !== 'Ao Deitar' && !formData.aposRefeicao && savedRecordId) {
+        reminderService.createReminder(savedRecordId, dataToSave);
+      }
+      
+      // Atualizar estoque de medicamentos
+      if (formData.medicamento && formData.medicamento !== 'Nenhum' && formData.periodo !== 'Ao Deitar') {
+        const quantidade = parseFloat(doseValue.replace(',', '.'));
+        const success = medicationService.decreaseStock(formData.medicamento, quantidade, doseUnit);
+        if (!success) {
+          addToast(`Aviso: Estoque de ${formData.medicamento} insuficiente`, 'info');
+        }
+      }
+      
       setIsModalOpen(false);
       setEditingId(null);
       await loadRecords();
@@ -433,7 +473,7 @@ const RecordsPage: React.FC = () => {
           setEditingId(null);
           setFormData({
             periodo: Periodo.CAFE_MANHA,
-            medicamento: Medicamento.NENHUM,
+            medicamento: '',
             antesRefeicao: 100,
             dose: '0',
             notes: '',
@@ -467,8 +507,8 @@ const RecordsPage: React.FC = () => {
 
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase leading-none">Registros</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Controle sua saúde com precisão absoluta.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-orange-600 dark:text-white uppercase leading-none">Registros de Glicemia</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Automonitoração de Glicemia Capilar (AMG)</p>
         </div>
         <div className="flex gap-2 items-center">
           {/* Desktop: Botões com texto */}
@@ -511,7 +551,7 @@ const RecordsPage: React.FC = () => {
 
       {/* Desktop: Inline Filters */}
       <div className="hidden md:block space-y-3">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
@@ -521,6 +561,15 @@ const RecordsPage: React.FC = () => {
             </span>
             {showAdvancedSearch ? 'Fechar ' : 'Abrir '} Pesquisa Avançada
           </button>
+          
+          <button
+            onClick={() => alert('Guia de aplicação de insulina em desenvolvimento')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[16px]">help</span>
+            Guia de Insulina
+          </button>
+
           {selectedRecords.size > 0 && (
             <button
               onClick={() => setShowDeleteMultipleModal(true)}
@@ -607,7 +656,7 @@ const RecordsPage: React.FC = () => {
         }}
       />
 
-      <div className="pb-24">
+      <div className="pb-32 md:pb-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
             <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
@@ -646,7 +695,8 @@ const RecordsPage: React.FC = () => {
                     </th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Data</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Período</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Valor</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Atual</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">2h Após</th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">Ações</th>
                   </tr>
                 </thead>
@@ -666,6 +716,7 @@ const RecordsPage: React.FC = () => {
                         <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase">{rec.periodo}</span>
                       </td>
                       <td className="px-6 py-4 font-black text-orange-600 dark:text-orange-400">{rec.antesRefeicao} <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span></td>
+                      <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400">{rec.aposRefeicao || '-'} {rec.aposRefeicao ? <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span> : ''}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1">
                           <button 
@@ -734,26 +785,97 @@ const RecordsPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-8 space-y-6">
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia (mg/dL)</label>
-                <input type="number" value={formData.antesRefeicao} onChange={e => setFormData({...formData, antesRefeicao: Number(e.target.value)})} className="w-full text-center text-6xl font-black bg-transparent border-none outline-none text-orange-600" required autoFocus />
-              </div>
+            <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
-                  <input type="date" value={formData.data} onChange={e => setFormData({...formData, data: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" />
+                  <input type="date" value={formData.data} onChange={e => setFormData({...formData, data: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" required />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</label>
-                  <select value={formData.periodo} onChange={e => setFormData({...formData, periodo: e.target.value as Periodo})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
-                    {Object.values(Periodo).map(p => <option key={p} value={p}>{p}</option>)}
+                  <select value={formData.periodo} onChange={e => { const p = e.target.value as Periodo; setFormData({...formData, periodo: p}); setHorario(periodoHorarios[p] || '08:00'); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none" required>
+                    <option value={Periodo.CAFE_MANHA}>Café da Manhã</option>
+                    <option value={Periodo.ALMOCO}>Almoço</option>
+                    <option value={Periodo.LANCHE}>Lanche</option>
+                    <option value={Periodo.JANTAR}>Jantar</option>
+                    <option value="Ao Deitar">Ao Deitar</option>
                   </select>
                 </div>
               </div>
-              <div className="flex gap-3 pt-4 pb-10">
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</label>
+                <input type="time" value={horario} onChange={e => setHorario(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" required />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia Atual (mg/dL)</label>
+                <input type="number" min="0" max="600" value={formData.antesRefeicao || ''} onChange={e => setFormData({...formData, antesRefeicao: Number(e.target.value)})} className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-orange-600" required placeholder="0" />
+              </div>
+
+              {formData.periodo !== 'Ao Deitar' && (
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
+                  <input type="number" min="0" max="600" value={formData.aposRefeicao || ''} onChange={e => setFormData({...formData, aposRefeicao: Number(e.target.value)})} className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" placeholder="0" />
+                </div>
+              )}
+
+              {formData.periodo !== 'Ao Deitar' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</label>
+                    <select value={formData.medicamento} onChange={e => setFormData({...formData, medicamento: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                      <option value="">Selecione um medicamento</option>
+                      {medications.map(med => (
+                        <option key={med.id} value={med.nome}>
+                          {med.nome} ({med.quantidade} {med.unidade})
+                        </option>
+                      ))}
+                      <option value="Nenhum">Nenhum</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => window.location.hash = '#/medicamentos'}
+                      className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">medication</span>
+                      Gerenciar Estoque
+                    </button>
+                  </div>
+
+                  {formData.medicamento && formData.medicamento !== 'Nenhum' && formData.medicamento !== '' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dose</label>
+                        <input type="text" value={doseValue} onChange={e => { setDoseValue(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" placeholder="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                        <select value={doseUnit} onChange={e => { setDoseUnit(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                          <option value="UI">UI</option>
+                          <option value="mg">mg</option>
+                          <option value="ml">ml</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                  {doseError && <p className="text-red-500 text-xs font-bold">{doseError}</p>}
+                </>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
+                <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} rows={3} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-medium outline-none dark:text-white resize-none" placeholder="Anotações adicionais..." />
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800">
+                <input type="checkbox" id="createAlert" className="w-5 h-5 accent-orange-600" />
+                <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300">Criar alerta para este medicamento</label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar Dados</button>
+                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar Registro</button>
               </div>
             </form>
           </div>

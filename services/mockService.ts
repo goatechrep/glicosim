@@ -155,5 +155,22 @@ export const mockService = {
   resetData: async (): Promise<void> => {
     await delay(1000);
     localStorage.removeItem(STORAGE_KEY);
+  },
+
+  // ALERTS
+  deleteAlert: async (id: string): Promise<void> => {
+    await delay(300);
+    const storage = getStorage();
+    storage.alerts = storage.alerts.filter(a => a.id !== id);
+    setStorage(storage);
+  },
+  updateAlert: async (id: string, data: Partial<Alert>): Promise<Alert> => {
+    await delay(300);
+    const storage = getStorage();
+    const index = storage.alerts.findIndex(a => a.id === id);
+    if (index === -1) throw new Error('Alert not found');
+    storage.alerts[index] = { ...storage.alerts[index], ...data };
+    setStorage(storage);
+    return storage.alerts[index];
   }
 };

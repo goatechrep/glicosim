@@ -16,18 +16,20 @@ export const dataSyncService = {
   // ===== Dashboard Stats =====
   getDashboardStats: async (): Promise<any> => {
     try {
-      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[], "alerts":[]}');
       const records = storage.records || [];
-      const lastRecord = records[records.length - 1];
-      const avg = records.reduce((sum: number, r: any) => sum + (r.antesRefeicao || 0), 0) / (records.length || 1);
+      const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+      const avg = records.length > 0 ? records.reduce((sum: number, r: any) => sum + (r.antesRefeicao || 0), 0) / records.length : 0;
+      
+      console.log('📊 Stats:', { records: records.length, avg });
       
       return {
         lastGlicemy: lastRecord?.antesRefeicao || 0,
         average: Math.round(avg),
         goalStatus: avg >= 55 && avg <= 100 ? 'Saudável' : 'Ajustar',
         totalRecords: records.length,
-        alerts: storage.alerts,
-        payments: storage.payments
+        alerts: storage.alerts || [],
+        payments: storage.payments || []
       };
     } catch (error) {
       console.error('❌ Erro ao calcular estatísticas do dashboard:', error);
@@ -44,11 +46,22 @@ export const dataSyncService = {
   // ===== Registros de glicemia =====
   getRecords: async (): Promise<any[]> => {
     try {
-      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[]}');
       return storage.records || [];
     } catch (error) {
       console.error('❌ Erro ao obter registros:', error);
       return [];
+    }
+  },
+
+  saveRecord: async (record: any): Promise<void> => {
+    try {
+      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[]}');
+      storage.records = storage.records || [];
+      storage.records.push(record);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
+    } catch (error) {
+      console.error('❌ Erro ao salvar registro:', error);
     }
   },
   // ===== EXPORTAR DADOS =====

@@ -4,6 +4,8 @@ import { NavLink } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabaseService } from '../services/supabaseService';
 import { dataSyncService } from '../services/dataSyncService';
+import { medicationService } from '../services/medicationService';
+import { reminderService } from '../services/reminderService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
 import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
@@ -14,20 +16,55 @@ const DashboardPage: React.FC = () => {
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');
+  const [lowStockMeds, setLowStockMeds] = useState<any[]>([]);
+  const [dueReminders, setDueReminders] = useState<any[]>([]);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [currentReminder, setCurrentReminder] = useState<any>(null);
+  const [aposRefeicaoValue, setAposRefeicaoValue] = useState<number>(0);
 
   const loadData = useCallback(async () => {
     const s = await dataSyncService.getDashboardStats();
     const r = await dataSyncService.getRecords();
+    const lowStock = medicationService.getLowStockMedications();
+    const reminders = reminderService.getDueReminders();
     setStats(s);
     setRecords(r);
+    setLowStockMeds(lowStock);
+    setDueReminders(reminders);
+    
+    if (reminders.length > 0 && !reminderModalOpen) {
+      setCurrentReminder(reminders[0]);
+      setReminderModalOpen(true);
+    }
+    
     setLoading(false);
-  }, []);
+  }, [reminderModalOpen]);
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  const handleSaveReminder = async () => {
+    if (currentReminder && aposRefeicaoValue > 0) {
+      await dataSyncService.saveRecord({ ...currentReminder.recordData, aposRefeicao: aposRefeicaoValue });
+      reminderService.deleteReminder(currentReminder.id);
+      setReminderModalOpen(false);
+      setCurrentReminder(null);
+      setAposRefeicaoValue(0);
+      await loadData();
+    }
+  };
+
+  const handleSkipReminder = () => {
+    if (currentReminder) {
+      reminderService.deleteReminder(currentReminder.id);
+      setReminderModalOpen(false);
+      setCurrentReminder(null);
+      setAposRefeicaoValue(0);
+    }
+  };
 
   const periodOptions = useMemo(() => [
     { value: '7d' as const, label: '7 dias', days: 7 },
@@ -69,8 +106,8 @@ const DashboardPage: React.FC = () => {
     <div className="flex flex-col gap-8 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="animate-slide-up-subtle">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Olá, {user?.nome?.split(' ')[0] || 'Usuário'}!</h2>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Olá, <span className="text-orange-600">{user?.nome?.split(' ')[0] || 'Usuário'}!</span></h2>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
         </div>
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -78,17 +115,36 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {lowStockMeds.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-amber-600">warning</span>
+              <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest">Estoque Baixo de Medicamentos</h3>
+            </div>
+            <NavLink to="/medicamentos" className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline">Ver Estoque</NavLink>
+          </div>
+          <div className="mt-2 space-y-1">
+            {lowStockMeds.slice(0, 3).map(m => (
+              <p key={m.id} className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                {m.nome}: {m.quantidade} {m.unidade} (limite: {m.limiteEstoque})
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 stagger-children">
-        <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 140 ? 'Alta' : 'Estável'} />
-        <Card title="Na Média" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average - 140) / 2 : 0)))}%`} unit="" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
-        <Card title="Última" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
+        <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 120 ? 'Alta' : 'Estável'} />
+        <Card title="Na Média" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 120 ? (stats.average - 120) / 2 : 0)))}%`} unit="" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
+        <Card title="Atual" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
         <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500 dark:text-orange-400" />
       </div>
 
       <div className="grid gap-8 md:grid-cols-12 pb-24 md:pb-0">
         <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência de Glicemia</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência da Glicemia</h3>
 
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl">
               {periodOptions.map(option => (
@@ -207,6 +263,47 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {reminderModalOpen && currentReminder && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-6">
+          <div className="w-full max-w-md bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-zoom-in border border-slate-100 dark:border-slate-800">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-600 text-2xl">schedule</span>
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Lembrete de Glicemia</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Medição 2h após</p>
+              </div>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <span className="font-black">{currentReminder.recordData.periodo}</span> - {currentReminder.recordData.antesRefeicao} mg/dL
+                </p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="600" 
+                  value={aposRefeicaoValue || ''} 
+                  onChange={e => setAposRefeicaoValue(Number(e.target.value))} 
+                  className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" 
+                  placeholder="0"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleSkipReminder} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Pular</button>
+                <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
