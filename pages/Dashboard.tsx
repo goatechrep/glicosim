@@ -9,6 +9,9 @@ import { reminderService } from '../services/reminderService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
 import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
+import { getAdSenseBlock } from '../data/adsense';
+import { getPlanById, getFormattedPrice } from '../data/plans';
+import { getBannersForPage } from '../data/banners';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -24,6 +27,8 @@ const DashboardPage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const banners = getBannersForPage('dashboard');
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -40,11 +45,23 @@ const DashboardPage: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex(prev => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
+
   const handleSync = async () => {
-    if (!isOnline || user?.plano !== 'PRO' || syncing) return;
+    if (!isOnline || user?.plano !== 'PRO' || syncing || !user?.id) return;
     setSyncing(true);
     try {
-      await dataSyncService.syncToSupabase();
+      const backup = dataSyncService.getLocalBackup(user.id);
+      if (backup) {
+        await dataSyncService.syncToSupabase(user.id, backup);
+      }
       const now = new Date().toLocaleString('pt-BR');
       localStorage.setItem('glicosim_last_sync', now);
       setLastSync(now);
@@ -241,10 +258,60 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
-        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
-        <div className="mt-4 h-24 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-          <span className="text-slate-400 text-sm">Anúncio 728x90</span>
+      {/* Banner de Avisos / Propaganda em Slide */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-48 md:h-40">
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-all duration-500 ${
+                index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+              }`}
+            >
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-6 text-white h-full`}>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
+                    {banner.badge && (
+                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded">
+                        {banner.badge}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black uppercase mb-2">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-sm mb-4`}>{banner.description}</p>
+                  <button
+                    onClick={() => window.location.hash = banner.buttonLink}
+                    className="px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
+                  >
+                    {banner.buttonText}
+                  </button>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+              </div>
+            </div>
+          ))}
+          {banners.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {banners.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentBannerIndex(index)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Propaganda</p>
+            <div className="w-full h-20 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <span className="text-slate-400 text-xs">Anúncio 300x100</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -255,19 +322,21 @@ const DashboardPage: React.FC = () => {
         <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500 dark:text-orange-400" />
       </div>
 
-      {user?.plano !== 'PRO' && (
+      {user?.plano !== 'PRO' && (() => {
+        const proPlan = getPlanById('PRO');
+        return (
         <>
           {/* Mobile: Banner Upgrade PRO */}
           <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
-            <div className="relative z-10">
-              <h3 className="text-xl font-black uppercase mb-2">Upgrade para PRO</h3>
-              <p className="text-orange-100 mb-4 text-sm">Remova propagandas e sincronize seus dados na nuvem</p>
-              <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-3xl font-black">R$ 49,90</span>
-                <span className="text-orange-200">/mês</span>
+            <div className="relative z-10 text-center">
+              <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
+              <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
+              <div className="flex items-baseline justify-center gap-2 mb-4">
+                <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
+                <span className="text-orange-200">/{proPlan?.periodo}</span>
               </div>
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
-                <span>Conhecer Plano PRO</span>
+                <span>Conhecer Plano {proPlan?.nome}</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </div>
             </div>
@@ -277,11 +346,12 @@ const DashboardPage: React.FC = () => {
           <div className="hidden md:block bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
             <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-              <span className="text-slate-400 text-sm">Anúncio 970x90</span>
+              <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-before-chart')?.format}</span>
             </div>
           </div>
         </>
-      )}
+        );
+      })()}
 
       <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
         <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
@@ -449,7 +519,7 @@ const DashboardPage: React.FC = () => {
         <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
           <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-            <span className="text-slate-400 text-sm">Anúncio 970x250</span>
+            <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-after-activities')?.format}</span>
           </div>
         </div>
       )}

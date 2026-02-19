@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { medicationService } from '../services/medicationService';
 import { Medication } from '../types/medication';
+import { getPlanById, getFormattedPrice } from '../data/plans';
+import { getBannersForPage } from '../data/banners';
+import { useAuth } from '../App';
 
 interface Toast {
   message: string;
@@ -9,10 +12,13 @@ interface Toast {
 }
 
 const MedicationsPage: React.FC = () => {
+  const { user } = useAuth();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
     nome: '',
     quantidade: 0,
@@ -21,6 +27,15 @@ const MedicationsPage: React.FC = () => {
   });
 
   useEffect(() => { loadMedications(); }, []);
+
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex(prev => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
 
   const loadMedications = () => {
     setMedications(medicationService.getMedications());
@@ -71,17 +86,17 @@ const MedicationsPage: React.FC = () => {
       </button>
 
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[10999] bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[10999] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed bottom-4 right-4 z-[11000] pointer-events-none flex flex-col items-end justify-end gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-lg border text-[11px] font-bold uppercase tracking-widest animate-toast-in backdrop-blur-sm ${
-            t.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : 
-            t.type === 'error' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' : 
-            'bg-slate-50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+          <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
+            t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
+            t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
+            'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
           }`}>
-            <span className="material-symbols-outlined text-base">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
-            <span>{t.message}</span>
+            <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
+            <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
           </div>
         ))}
       </div>
@@ -108,6 +123,63 @@ const MedicationsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Banner de Avisos / Propaganda em Slide */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-48 md:h-40">
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-all duration-500 ${
+                index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+              }`}
+            >
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-6 text-white h-full`}>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
+                    {banner.badge && (
+                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded">
+                        {banner.badge}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black uppercase mb-2">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-sm mb-4`}>{banner.description}</p>
+                  <button
+                    onClick={() => window.location.hash = banner.buttonLink}
+                    className="px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
+                  >
+                    {banner.buttonText}
+                  </button>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+              </div>
+            </div>
+          ))}
+          {banners.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {banners.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentBannerIndex(index)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Propaganda</p>
+            <div className="w-full h-20 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <span className="text-slate-400 text-xs">Anúncio 300x100</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="pb-24">
         {medications.length === 0 ? (
@@ -160,8 +232,8 @@ const MedicationsPage: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-0">
-          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-t-lg md:rounded-lg overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Medicamento</h3>
               <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">
@@ -222,8 +294,8 @@ const MedicationsPage: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar</button>
               </div>
             </form>
           </div>

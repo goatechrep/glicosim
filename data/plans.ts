@@ -3,6 +3,7 @@ export interface Plan {
   nome: string;
   preco: number;
   periodo: string;
+  descricao: string;
   recursos: string[];
   cor: string;
   destaque: boolean;
@@ -13,9 +14,10 @@ export interface Plan {
 export const plans: Plan[] = [
   {
     id: 'FREE',
-    nome: 'Free',
+    nome: 'GlicoSIM Free',
     preco: 0,
     periodo: 'Grátis para sempre',
+    descricao: 'Grátis para sempre',
     recursos: [
       'Registro de glicemia',
       'Histórico básico',
@@ -28,9 +30,10 @@ export const plans: Plan[] = [
   },
   {
     id: 'PRO',
-    nome: 'PRO',
+    nome: 'GlicoSIM PRO',
     preco: 49.90,
-    periodo: 'mês',
+    periodo: 'Mês',
+    descricao: 'Sem ropagandas chatas e limitações!',
     recursos: [
       'Tudo do plano Free',
       'Sincronização na nuvem',

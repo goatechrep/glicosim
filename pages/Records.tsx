@@ -491,17 +491,17 @@ const RecordsPage: React.FC = () => {
       </button>
 
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[10999] bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[10999] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed bottom-4 right-4 z-[11000] pointer-events-none flex flex-col items-end justify-end gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-lg border text-[11px] font-bold uppercase tracking-widest animate-toast-in backdrop-blur-sm ${
-            t.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : 
-            t.type === 'error' ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' : 
-            'bg-slate-50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+          <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
+            t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
+            t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
+            'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
           }`}>
-            <span className="material-symbols-outlined text-base">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
-            <span>{t.message}</span>
+            <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
+            <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
           </div>
         ))}
       </div>
@@ -511,7 +511,44 @@ const RecordsPage: React.FC = () => {
           <h2 className="text-2xl font-bold tracking-tight text-orange-600 dark:text-white uppercase leading-none">Registros de Glicemia</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Automonitoração de Glicemia Capilar (AMG)</p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
+          {/* Mobile: Botões reorganizados */}
+          <div className="sm:hidden flex gap-2 w-full">
+            <button 
+              onClick={exportToPDF}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
+              title="Gerar PDF"
+            >
+              <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+              <span>PDF</span>
+            </button>
+            <button 
+              onClick={exportToCSV}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+              title="Exportar CSV"
+            >
+              <span className="material-symbols-outlined text-[16px]">table_view</span>
+              <span>CSV</span>
+            </button>
+          </div>
+          <div className="sm:hidden flex gap-2 w-full">
+            <button 
+              onClick={exportToJSON}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+              title="Exportar JSON"
+            >
+              <span className="material-symbols-outlined text-[16px]">data_object</span>
+              <span>JSON</span>
+            </button>
+            <button 
+              onClick={exportToExcel}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+              title="Exportar Excel"
+            >
+              <span className="material-symbols-outlined text-[16px]">table_chart</span>
+              <span>XLS</span>
+            </button>
+          </div>
           {/* Desktop: Botões com texto */}
           <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
             <button 
@@ -541,7 +578,7 @@ const RecordsPage: React.FC = () => {
           </div>
           <button 
             onClick={exportToPDF}
-            className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 bg-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
+            className="hidden sm:flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 bg-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
             title="Gerar PDF"
           >
             <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
@@ -754,8 +791,8 @@ const RecordsPage: React.FC = () => {
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Apagar Registro?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
             <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleConfirmDelete} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg">Excluir Permanente</button>
-              <button onClick={() => setIsDeleteModalOpen(false)} className="w-full py-3 bg-slate-50 dark:bg-slate-900 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-lg">Manter Registro</button>
+              <button onClick={handleConfirmDelete} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all">Excluir Permanente</button>
+              <button onClick={() => setIsDeleteModalOpen(false)} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Manter Registro</button>
             </div>
           </div>
         </div>
@@ -770,8 +807,8 @@ const RecordsPage: React.FC = () => {
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Deletar {selectedRecords.size} Registros?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
             <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleDeleteMultiple} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg">Excluir Permanente</button>
-              <button onClick={() => setShowDeleteMultipleModal(false)} className="w-full py-3 bg-slate-50 dark:bg-slate-900 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-lg">Cancelar</button>
+              <button onClick={handleDeleteMultiple} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all">Excluir Permanente</button>
+              <button onClick={() => setShowDeleteMultipleModal(false)} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
             </div>
           </div>
         </div>
@@ -921,7 +958,7 @@ const RecordsPage: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4 sticky bottom-0 bg-white dark:bg-[#111121] pb-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Cancelar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
                 <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar Registro</button>
               </div>
             </form>

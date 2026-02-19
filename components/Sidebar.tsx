@@ -61,16 +61,18 @@ const Sidebar: React.FC = () => {
         const proPlan = getPlanById('PRO');
         return (
         <div className="hidden md:block bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
-          <div className="relative z-10">
-            <h3 className="text-lg font-black uppercase mb-1">Atualizar para o {proPlan?.nome}</h3>
-            <p className="text-orange-100 text-xs mb-3">Remova propagandas e sincronize na nuvem</p>
-            <div className="flex items-baseline gap-1 mb-3">
+          <div className="relative z-10 text-center">
+            <h3 className="text-[22px] font-black uppercase mb-1">Atualize para {proPlan?.nome}</h3>
+            <p className="text-orange-100 text-[10px] mb-3">{proPlan?.descricao}</p>
+            <div className="flex items-baseline justify-center gap-1 mb-3">
               <span className="text-2xl font-black">{getFormattedPrice(proPlan!)}</span>
               <span className="text-orange-200 text-xs">/{proPlan?.periodo}</span>
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 font-black text-[10px] uppercase rounded-lg hover:bg-orange-50 transition-all">
-              <span>Conhecer Plano PRO</span>
-              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 font-black text-[10px] uppercase rounded-lg hover:bg-orange-50 transition-all">
+                <span>Conhecer Plano PRO</span>
+                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </div>
             </div>
           </div>
           <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>

@@ -5,6 +5,7 @@ import { mockService } from '../services/mockService';
 import { supabaseService } from '../services/supabaseService';
 import { dataSyncService } from '../services/dataSyncService';
 import { settingsService } from '../services/settingsService';
+import { plans, getPlanById, getFormattedPrice } from '../data/plans';
 import { PlanoType } from '../types';
 import { applyCPFMask, applyWhatsAppMask, validateCPF } from '../utils/formatters';
 
@@ -185,34 +186,37 @@ const SettingsPage: React.FC = () => {
   };
 
   const tabs = [
-    { id: 'perfil', label: 'Meu Perfil' },
-    { id: 'assinatura', label: 'Assinatura' },
-    { id: 'sistema', label: 'Sistema' },
+    { id: 'perfil', label: 'Meu Perfil', icon: 'person' },
+    { id: 'assinatura', label: 'Assinatura', icon: 'workspace_premium' },
+    { id: 'sistema', label: 'Sistema', icon: 'settings' },
   ];
 
   return (
     <div className="animate-fade-in space-y-8 pb-12">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Configurações</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-orange-600 dark:text-white uppercase">Configurações</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seu perfil e dados pessoais.</p>
         </div>
       </header>
 
-      <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl max-w-md">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap ${
-              activeTab === tab.id 
-              ? 'bg-white dark:bg-slate-700 text-orange-600' 
-              : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex justify-center">
+        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap ${
+                activeTab === tab.id 
+                ? 'bg-white dark:bg-slate-700 text-orange-600' 
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-8xl pt-0">
@@ -221,7 +225,7 @@ const SettingsPage: React.FC = () => {
             {/* Foto de Perfil */}
             <div className="flex items-center gap-6">
               <div className="relative group">
-                <div className="w-24 h-24 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10 rounded-lg flex items-center justify-center text-4xl font-black text-orange-600 border-2 border-orange-200 dark:border-orange-900/30 overflow-hidden">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/10 rounded-lg flex items-center justify-center text-4xl font-black text-orange-600 border-2 border-orange-200 dark:border-orange-900/30 overflow-hidden">
                   {fotoPerfil ? (
                     <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
                   ) : (
@@ -350,10 +354,98 @@ const SettingsPage: React.FC = () => {
         )}
 
         {activeTab === 'assinatura' && (
-          <div className="bg-orange-600 p-12 rounded-[2.5rem] relative overflow-hidden text-white animate-slide-up">
-            <h3 className="text-4xl font-black tracking-tighter uppercase relative z-10">{user?.plano} PRO</h3>
-            <p className="text-orange-100 text-sm mt-4 opacity-90 max-w-sm leading-relaxed relative z-10">Sua assinatura está ativa. Aproveite o acesso completo à plataforma.</p>
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="space-y-6 animate-slide-up">
+            <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-4 md:p-8 rounded-lg">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest text-center md:text-left">Escolha seu Plano</h4>
+              <div className="overflow-x-auto -mx-4 md:mx-0">
+                <div className="flex md:justify-center gap-4 px-4 md:px-0 pb-4">
+                  {plans.map(plan => {
+                    const isCurrentPlan = user?.plano === plan.id;
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`flex-shrink-0 w-72 md:w-80 rounded-2xl border-2 transition-all shadow-sm hover:shadow-md overflow-hidden ${
+                          isCurrentPlan
+                            ? 'border-orange-600 bg-white dark:bg-[#111121]'
+                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121] hover:border-orange-300 dark:hover:border-orange-700'
+                        }`}
+                      >
+                        {/* Header com ícone e badge */}
+                        <div className="p-6 pb-4">
+                          <div className="flex flex-col items-center mb-4">
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-sm mb-3 ${
+                              plan.id === 'PRO' ? 'bg-gradient-to-br from-orange-500 to-orange-600' : 'bg-slate-100 dark:bg-slate-800'
+                            }`}>
+                              <span className={`material-symbols-outlined text-3xl ${
+                                plan.id === 'PRO' ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                              }`}>{plan.id === 'PRO' ? 'workspace_premium' : 'person'}</span>
+                            </div>
+                          </div>
+                          <h5 className="text-2xl font-black text-slate-900 dark:text-white mb-1 text-center">{plan.nome}</h5>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{plan.descricao}</p>
+                        </div>
+                        
+                        {/* Faixa de preço destacada */}
+                        <div className={`py-8 ${
+                          plan.id === 'PRO' 
+                            ? 'bg-gradient-to-br from-orange-500 to-orange-600' 
+                            : 'bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                          <div className="flex items-baseline justify-center gap-1">
+                            <p className={`text-5xl font-black ${
+                              plan.id === 'PRO' ? 'text-white' : 'text-slate-900 dark:text-white'
+                            }`}>{getFormattedPrice(plan)}</p>
+                            {plan.preco > 0 && (
+                              <p className={`text-lg font-bold ${
+                                plan.id === 'PRO' ? 'text-orange-100' : 'text-slate-500 dark:text-slate-400'
+                              }`}>/{plan.periodo}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Recursos */}
+                        <div className="p-6">
+                          <ul className="space-y-3 mb-6">
+                            {plan.recursos.map((recurso, idx) => (
+                              <li key={idx} className="flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+                                <span className="material-symbols-outlined text-[18px] text-emerald-500 flex-shrink-0 mt-0.5">check_circle</span>
+                                <span className="leading-relaxed">{recurso}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {isCurrentPlan ? (
+                            <button
+                              disabled
+                              className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 cursor-default"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                              Plano Ativo
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => alert(`Upgrade/Downgrade para ${plan.nome} em breve!`)}
+                              className="w-full px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">
+                                {plan.preco > (getPlanById(user?.plano || 'FREE')?.preco || 0) ? 'arrow_upward' : 'arrow_downward'}
+                              </span>
+                              {plan.preco > (getPlanById(user?.plano || 'FREE')?.preco || 0) ? 'Fazer Upgrade' : 'Fazer Downgrade'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex justify-center gap-2 mt-6">
+                {plans.map((plan, idx) => (
+                  <div key={idx} className={`w-2 h-2 rounded-full transition-all ${
+                    user?.plano === plan.id ? 'bg-orange-600 w-6' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}></div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -543,7 +635,7 @@ const SettingsPage: React.FC = () => {
                     setShowDeleteModal(false);
                     setDeleteConfirmText('');
                   }}
-                  className="flex-1 px-4 py-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs uppercase rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition-all"
+                  className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all"
                 >
                   Cancelar
                 </button>
