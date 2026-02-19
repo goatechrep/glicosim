@@ -4,6 +4,7 @@ import { useAuth } from '../App';
 import { mockService } from '../services/mockService';
 import { supabaseService } from '../services/supabaseService';
 import { dataSyncService } from '../services/dataSyncService';
+import { settingsService } from '../services/settingsService';
 import { PlanoType } from '../types';
 import { applyCPFMask, applyWhatsAppMask, validateCPF } from '../utils/formatters';
 
@@ -27,6 +28,7 @@ const SettingsPage: React.FC = () => {
   const [biotipo, setBiotipo] = useState<string>(user?.biotipo || 'Mesomorfo');
   const [fotoPerfil, setFotoPerfil] = useState<string>(user?.foto || '');
   const [cpfError, setCpfError] = useState<string>('');
+  const [glucoseSettings, setGlucoseSettings] = useState(settingsService.getSettings());
 
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = applyCPFMask(e.target.value);
@@ -357,8 +359,72 @@ const SettingsPage: React.FC = () => {
 
         {activeTab === 'sistema' && (
           <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 p-10 rounded-lg animate-slide-up space-y-8">
-            {/* Temas */}
+            {/* Limites de Glicemia */}
             <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest">Limites de Glicemia</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Limite Mínimo (mg/dL)</label>
+                  <input 
+                    type="number" 
+                    min="40" 
+                    max="100" 
+                    value={glucoseSettings.minLimit} 
+                    onChange={e => setGlucoseSettings({...glucoseSettings, minLimit: Number(e.target.value)})} 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-[9px] text-slate-400">Padrão: 55 mg/dL</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ideal Máximo (mg/dL)</label>
+                  <input 
+                    type="number" 
+                    min="80" 
+                    max="140" 
+                    value={glucoseSettings.idealMax} 
+                    onChange={e => setGlucoseSettings({...glucoseSettings, idealMax: Number(e.target.value)})} 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-[9px] text-slate-400">Padrão: 100 mg/dL</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Limite Máximo (mg/dL)</label>
+                  <input 
+                    type="number" 
+                    min="300" 
+                    max="600" 
+                    value={glucoseSettings.maxLimit} 
+                    onChange={e => setGlucoseSettings({...glucoseSettings, maxLimit: Number(e.target.value)})} 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-[9px] text-slate-400">Padrão: 500 mg/dL</p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    settingsService.saveSettings(glucoseSettings);
+                    alert('✅ Limites salvos com sucesso!');
+                  }}
+                  className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
+                >
+                  Salvar Limites
+                </button>
+                <button
+                  onClick={() => {
+                    settingsService.resetSettings();
+                    setGlucoseSettings(settingsService.getSettings());
+                    alert('✅ Limites restaurados para padrão!');
+                  }}
+                  className="px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
+                >
+                  Restaurar Padrão
+                </button>
+              </div>
+            </div>
+
+            {/* Temas */}
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-8">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase mb-6 tracking-widest">Temas da Interface</h4>
               <div className="grid grid-cols-3 gap-6">
                 {['light', 'dark', 'system'].map(mode => (

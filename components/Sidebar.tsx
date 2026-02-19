@@ -2,6 +2,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import { getPlanById, getFormattedPrice } from '../data/plans';
 
 const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -55,16 +56,58 @@ const Sidebar: React.FC = () => {
         </nav>
       </div>
 
+      {/* Banner Upgrade PRO */}
+      {user?.plano !== 'PRO' && (() => {
+        const proPlan = getPlanById('PRO');
+        return (
+        <div className="hidden md:block bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
+          <div className="relative z-10">
+            <h3 className="text-lg font-black uppercase mb-1">Atualizar para o {proPlan?.nome}</h3>
+            <p className="text-orange-100 text-xs mb-3">Remova propagandas e sincronize na nuvem</p>
+            <div className="flex items-baseline gap-1 mb-3">
+              <span className="text-2xl font-black">{getFormattedPrice(proPlan!)}</span>
+              <span className="text-orange-200 text-xs">/{proPlan?.periodo}</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 font-black text-[10px] uppercase rounded-lg hover:bg-orange-50 transition-all">
+              <span>Conhecer Plano PRO</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </div>
+          </div>
+          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+        </div>
+        );
+      })()}
+      {/* Mobile: AdSense ao invés de banner PRO */}
+      {user?.plano !== 'PRO' && (
+        <div className="md:hidden bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
+          <div className="mt-4 h-24 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+            <span className="text-slate-400 text-sm">Anúncio 320x100</span>
+          </div>
+        </div>
+      )}
+
       {/* Perfil fixado no fim da tela */}
       <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800/80">
         <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 group transition-all hover:border-orange-200 dark:hover:border-orange-900/30">
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-11 h-11 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 font-black text-sm border border-green-200 dark:border-green-800 transition-transform group-hover:scale-110">
-              {user?.plano}
-            </div>
+          <div className="flex items-center gap-3 mb-4">
+            {user?.foto ? (
+              <div className="w-11 h-11 rounded-xl overflow-hidden border-2 border-orange-200 dark:border-orange-900/30">
+                <img src={user.foto} alt={user.nome} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-11 h-11 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-600 font-black text-sm border border-orange-200 dark:border-orange-800">
+                {user?.nome?.charAt(0) || 'U'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 dark:text-green-600 truncate">Plano {user?.plano}</p>
-              <p className="text-[10px] text-slate-500 font-semibold truncate tracking-wide">Tema atual: {user?.theme}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.nome || 'Usuário'}</p>
+                <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded ${user?.plano === 'PRO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                  {user?.plano}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-semibold truncate tracking-wide">Tema: {user?.theme}</p>
             </div>
           </div>
           <button

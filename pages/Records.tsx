@@ -11,6 +11,7 @@ import useDebounce from '../hooks/useDebounce';
 import Button from '../components/Button';
 import { medicationService } from '../services/medicationService';
 import { reminderService } from '../services/reminderService';
+import { settingsService } from '../services/settingsService';
 
 interface Toast {
   message: string;
@@ -563,7 +564,7 @@ const RecordsPage: React.FC = () => {
           </button>
           
           <button
-            onClick={() => alert('Guia de aplicação de insulina em desenvolvimento')}
+            onClick={() => window.location.hash = '#/ajuda?guide=insulin'}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px]">help</span>
@@ -810,13 +811,59 @@ const RecordsPage: React.FC = () => {
 
               <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia Atual (mg/dL)</label>
-                <input type="number" min="0" max="600" value={formData.antesRefeicao || ''} onChange={e => setFormData({...formData, antesRefeicao: Number(e.target.value)})} className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-orange-600" required placeholder="0" />
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="500" 
+                  step="1"
+                  value={formData.antesRefeicao || ''} 
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    if (e.target.value.length > 3) return;
+                    const settings = settingsService.getSettings();
+                    setFormData({...formData, antesRefeicao: val});
+                  }} 
+                  onBlur={e => {
+                    const val = Number(e.target.value);
+                    const settings = settingsService.getSettings();
+                    if (val >= settings.maxLimit) {
+                      alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                    } else if (val > 0 && val < settings.minLimit) {
+                      alert('⚠️ ATENÇÃO: Glicemia muito baixa!\n\n🍬 Consuma açúcar ou suco imediatamente\n💉 Lave as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                    }
+                  }}
+                  className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-orange-600" 
+                  required 
+                  placeholder="0" 
+                />
               </div>
 
               {formData.periodo !== 'Ao Deitar' && (
                 <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
-                  <input type="number" min="0" max="600" value={formData.aposRefeicao || ''} onChange={e => setFormData({...formData, aposRefeicao: Number(e.target.value)})} className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" placeholder="0" />
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max="500" 
+                    step="1"
+                    value={formData.aposRefeicao || ''} 
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      if (e.target.value.length > 3) return;
+                      setFormData({...formData, aposRefeicao: val});
+                    }} 
+                    onBlur={e => {
+                      const val = Number(e.target.value);
+                      const settings = settingsService.getSettings();
+                      if (val >= settings.maxLimit) {
+                        alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                      } else if (val > 0 && val < settings.minLimit) {
+                        alert('⚠️ ATENÇÃO: Glicemia muito baixa!\n\n🍬 Consuma açúcar ou suco imediatamente\n💉 Lave as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                      }
+                    }}
+                    className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" 
+                    placeholder="0" 
+                  />
                 </div>
               )}
 
@@ -869,13 +916,13 @@ const RecordsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800">
-                <input type="checkbox" id="createAlert" className="w-5 h-5 accent-orange-600" />
-                <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300">Criar alerta para este medicamento</label>
+                <input type="checkbox" id="createAlert" className="w-5 h-5 accent-orange-600 cursor-pointer" />
+                <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Criar alerta para este registro</label>
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar Registro</button>
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white dark:bg-[#111121] pb-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar Registro</button>
               </div>
             </form>
           </div>

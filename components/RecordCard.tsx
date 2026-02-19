@@ -15,6 +15,14 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
     return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400';
   };
 
+  const getDifference = () => {
+    if (!record.aposRefeicao || record.aposRefeicao === 0) return null;
+    const diff = record.aposRefeicao - record.antesRefeicao;
+    return diff;
+  };
+
+  const difference = getDifference();
+
   return (
     <div className="
       bg-white dark:bg-[#111121] 
@@ -65,14 +73,42 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
       </div>
 
       {/* Glicemia destaque */}
-      <div className={`
-        inline-flex items-baseline gap-2 px-4 py-2 rounded-xl mb-4
-        ${getGlicemiaColor(record.antesRefeicao)}
-      `}>
-        <span className="text-3xl font-black tracking-tight">
-          {record.antesRefeicao}
-        </span>
-        <span className="text-xs font-bold uppercase">mg/dL</span>
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className={`
+            inline-flex items-baseline gap-2 px-4 py-2 rounded-xl
+            ${getGlicemiaColor(record.antesRefeicao)}
+          `}>
+            <span className="text-2xl font-black tracking-tight">
+              {record.antesRefeicao}
+            </span>
+            <span className="text-xs font-bold uppercase">mg/dL</span>
+          </div>
+          
+          {difference !== null && (
+            <>
+              <span className="material-symbols-outlined text-slate-400 text-[16px]">arrow_forward</span>
+              <div className={`
+                inline-flex items-baseline gap-2 px-4 py-2 rounded-xl
+                ${getGlicemiaColor(record.aposRefeicao || 0)}
+              `}>
+                <span className="text-2xl font-black tracking-tight">
+                  {record.aposRefeicao}
+                </span>
+                <span className="text-xs font-bold uppercase">mg/dL</span>
+              </div>
+            </>
+          )}
+        </div>
+        {difference !== null && (
+          <div className={`self-start px-3 py-1 rounded-lg text-xs font-black ${
+            difference > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 
+            difference < 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 
+            'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+          }`}>
+            Diferença: {difference > 0 ? '+' : ''}{difference} mg/dL
+          </div>
+        )}
       </div>
 
       {/* Detalhes */}

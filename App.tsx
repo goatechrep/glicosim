@@ -12,9 +12,13 @@ const RecordsPage = lazy(() => import('./pages/Records'));
 const MedicationsPage = lazy(() => import('./pages/Medications'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const AlertsPage = lazy(() => import('./pages/Alerts'));
+const HelpPage = lazy(() => import('./pages/Help'));
+const ProPage = lazy(() => import('./pages/Pro'));
+const UpdatesPage = lazy(() => import('./pages/Updates'));
 
 // Components
 import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 
 // Loading fallback
 const PageLoader: React.FC = () => (
@@ -336,13 +340,7 @@ const App: React.FC = () => {
                           </div>
                           <span className="font-black text-base uppercase">Glico<span className="text-orange-600">SIM</span></span>
                         </div>
-                        <NavLink 
-                          to="/ajustes" 
-                          className="min-w-[44px] min-h-[44px] rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-100 dark:border-slate-800 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-                          aria-label="Configurações"
-                        >
-                          <span className="material-symbols-outlined text-slate-500 text-[20px]" aria-hidden="true">person</span>
-                        </NavLink>
+                        <LogoutButton />
                       </div>
 
                       <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar relative">
@@ -353,9 +351,13 @@ const App: React.FC = () => {
                             <Route path="/medicamentos" element={<MedicationsPage />} />
                             <Route path="/alertas" element={<AlertsPage />} />
                             <Route path="/ajustes" element={<SettingsPage />} />
+                            <Route path="/ajuda" element={<HelpPage />} />
+                            <Route path="/pro" element={<ProPage />} />
+                            <Route path="/atualizacoes" element={<UpdatesPage />} />
                             <Route path="*" element={<Navigate to="/" />} />
                           </Routes>
                         </LazyPage>
+                        <Footer />
                       </main>
 
                       {/* Fixed Mobile Bottom Navigation */}
@@ -422,6 +424,23 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
     <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
   </NavLink>
 );
+
+const LogoutButton: React.FC = () => {
+  const { logout } = useAuth();
+  return (
+    <button
+      onClick={() => {
+        if (confirm('Deseja sair do sistema?')) {
+          logout();
+        }
+      }}
+      className="min-w-[44px] min-h-[44px] rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center border border-red-200 dark:border-red-800 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      aria-label="Sair do sistema"
+    >
+      <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[20px]">logout</span>
+    </button>
+  );
+};
 
 const OnboardingCheck: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
