@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { mockService } from '../services/mockService';
+import { supabaseService } from '../services/supabaseService';
 import { dataSyncService } from '../services/dataSyncService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
@@ -73,14 +73,14 @@ const DashboardPage: React.FC = () => {
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Seu controle glicêmico em tempo real.</p>
         </div>
         <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-full border border-emerald-100 dark:border-emerald-900/20">
-           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-           <span className="text-[10px] font-black uppercase tracking-widest">Sincronizado</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Sincronizado</span>
         </div>
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 stagger-children">
         <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 140 ? 'Alta' : 'Estável'} />
-        <Card title="No Alvo" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average-140)/2 : 0)))}%`} unit="ideal" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
+        <Card title="Na Média" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 140 ? (stats.average - 140) / 2 : 0)))}%`} unit="" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
         <Card title="Última" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
         <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500 dark:text-orange-400" />
       </div>
@@ -89,7 +89,7 @@ const DashboardPage: React.FC = () => {
         <div className="md:col-span-8 rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência de Glicemia</h3>
-            
+
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl">
               {periodOptions.map(option => (
                 <button
@@ -117,38 +117,38 @@ const DashboardPage: React.FC = () => {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#cbd5e1" opacity={0.3} className="dark:opacity-10" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fontSize: 11, fontWeight: 700, fill: '#94a3b8'}} 
-                  dy={12} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
+                  dy={12}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fontSize: 11, fontWeight: 700, fill: '#94a3b8'}}
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
                   domain={[0, 300]}
                 />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
-                    backgroundColor: 'rgba(255,255,255,0.98)', 
-                    borderRadius: '16px', 
+                    backgroundColor: 'rgba(255,255,255,0.98)',
+                    borderRadius: '16px',
                     border: '1px solid #e2e8f0',
-                    boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)', 
+                    boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
                     padding: '12px 16px'
-                  }} 
-                  itemStyle={{fontSize: '14px', fontWeight: '700', color: '#f97316'}}
+                  }}
+                  itemStyle={{ fontSize: '14px', fontWeight: '700', color: '#f97316' }}
                   labelStyle={{
-                    fontSize: '10px', 
-                    color: '#64748b', 
-                    textTransform: 'uppercase', 
-                    marginBottom: '6px', 
+                    fontSize: '10px',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    marginBottom: '6px',
                     fontWeight: '800',
                     letterSpacing: '0.1em'
                   }}
@@ -157,15 +157,15 @@ const DashboardPage: React.FC = () => {
                     return [`${value} mg/dL`, status];
                   }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="val" 
-                  stroke="#f97316" 
-                  strokeWidth={4} 
-                  fillOpacity={1} 
-                  fill="url(#orangeGrad)" 
-                  dot={{fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff'}} 
-                  activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }} 
+                <Area
+                  type="monotone"
+                  dataKey="val"
+                  stroke="#f97316"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#orangeGrad)"
+                  dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -190,11 +190,11 @@ const DashboardPage: React.FC = () => {
                 <div key={record.id} className="flex items-center justify-between group">
                   <div className="flex items-center gap-4">
                     <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
-                       <span className="material-symbols-outlined text-[22px]">water_drop</span>
+                      <span className="material-symbols-outlined text-[22px]">water_drop</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{record.periodo}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{record.data.split('-').reverse().slice(0,2).join('/')}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{record.data.split('-').reverse().slice(0, 2).join('/')}</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -231,7 +231,7 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
   ">
     {/* Borda animada no hover */}
     <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-orange-500/0 to-orange-500/0 group-hover:from-orange-500/5 group-hover:to-orange-500/10 transition-all duration-500 pointer-events-none" />
-    
+
     <div className="relative z-10">
       <div className="flex items-center justify-between mb-6">
         <div className="
@@ -262,7 +262,7 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
           </span>
         )}
       </div>
-      
+
       <div className="space-y-2">
         <p className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.15em]">
           {title}
