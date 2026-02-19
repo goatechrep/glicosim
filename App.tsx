@@ -284,7 +284,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 overflow-hidden">
             <Routes>
               <Route path="/login" element={
                 <LazyPage>
