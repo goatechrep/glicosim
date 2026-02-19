@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { mockService } from '../services/mockService';
+import { dataSyncService } from '../services/dataSyncService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
 import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
@@ -15,8 +16,8 @@ const DashboardPage: React.FC = () => {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');
 
   const loadData = useCallback(async () => {
-    const s = await mockService.getDashboardStats();
-    const r = await mockService.getRecords();
+    const s = await dataSyncService.getDashboardStats();
+    const r = await dataSyncService.getRecords();
     setStats(s);
     setRecords(r);
     setLoading(false);

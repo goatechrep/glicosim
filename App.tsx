@@ -54,11 +54,48 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
+    // Verificar sessão inicial
+    const checkSession = async () => {
+      try {
+        console.log('🔍 Verificando sessão inicial...');
+        const { data: { session } } = await supabaseClient!.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (session?.user) {
+          console.log('✅ Sessão encontrada:', session.user.id);
+          const userProfile = await supabaseService.getUser(session.user.id);
+          if (userProfile && mounted) {
+            console.log('✅ Perfil carregado:', userProfile.nome);
+            setUser(userProfile);
+          }
+        } else {
+          console.log('❌ Nenhuma sessão encontrada');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar sessão:', error);
+      } finally {
+        if (mounted) {
+          console.log('✅ Loading finalizado');
+          setLoading(false);
+        }
+      }
+    };
+
+    checkSession();
+
     // Monitorar mudanças de estado de autenticação do Supabase
     const { data: { subscription } } = supabaseClient!.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 Auth state changed:', event, 'Session:', !!session);
+        
+        if (!mounted) return;
+        
         if (session?.user) {
           // Usuário autenticado - buscar perfil
+          console.log('👤 Buscando perfil do usuário:', session.user.id);
           try {
             const userProfile = await supabaseService.getUser(session.user.id);
             if (!userProfile) {
@@ -68,16 +105,18 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               setUser(null);
               setSessionExpired(true);
             } else {
+              console.log('✅ Perfil encontrado:', userProfile.nome, 'Onboarded:', userProfile.isOnboarded);
               setUser(userProfile);
               setSessionExpired(false);
             }
           } catch (error) {
-            console.error('Erro ao buscar perfil:', error);
+            console.error('❌ Erro ao buscar perfil:', error);
             setUser(null);
             setSessionExpired(true);
           }
         } else {
           // Sem sessão
+          console.log('🚫 Sem sessão ativa');
           setUser(null);
           setSessionExpired(event === 'SIGNED_OUT');
         }
@@ -85,7 +124,10 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -172,13 +214,29 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-white dark:bg-[#111121]">
-      <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-  if (!user) return <Navigate to="/login" />;
-  if (!user.isOnboarded) return <Navigate to="/onboarding" />;
+  
+  console.log('🔒 PrivateRoute:', { user: !!user, loading, isOnboarded: user?.isOnboarded });
+  
+  if (loading) {
+    console.log('⏳ PrivateRoute: Carregando...');
+    return (
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-[#111121]">
+        <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    console.log('❌ PrivateRoute: Sem usuário, redirecionando para login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!user.isOnboarded) {
+    console.log('⚠️ PrivateRoute: Usuário não onboarded, redirecionando para onboarding');
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  console.log('✅ PrivateRoute: Acesso permitido');
   return <>{children}</>;
 };
 

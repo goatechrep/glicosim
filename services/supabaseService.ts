@@ -42,45 +42,47 @@ export const supabaseService = {
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          nome: nome,
+        }
+      }
     });
 
     if (error) throw error;
     
-    if (data.user) {
-      // Criar perfil do usuário
-      await supabaseClient
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email,
-          nome,
-          plano: PlanoType.FREE,
-          is_onboarded: false,
-          theme: 'dark',
-          notifications: true,
-        });
-    }
-
+    console.log('✅ Usuário criado:', data.user?.id);
     return data;
   },
 
   signIn: async (email: string, password: string) => {
     if (!supabaseClient) throw new Error('Supabase not configured');
     
+    console.log('🔐 Tentando fazer login...');
+    
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erro no login:', error);
+      throw error;
+    }
+
+    console.log('✅ Login bem-sucedido, usuário:', data.user?.id);
 
     // Atualizar último login
     if (data.user) {
       const userProfile = await supabaseService.getUser(data.user.id);
+      
+      console.log('👤 Perfil encontrado:', !!userProfile);
+
       if (!userProfile) {
-        // Deslogar o usuário e lançar erro
+        console.error('❌ Perfil não encontrado no banco');
         await supabaseClient.auth.signOut();
-        throw new Error('Perfil do usuário não encontrado. Crie uma conta e complete o processo de inicial.');
+        throw new Error('Perfil do usuário não encontrado. Crie uma conta e complete o processo');
       }
 
       // Atualizar último login apenas se o perfil existir
@@ -88,6 +90,8 @@ export const supabaseService = {
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
+        
+      console.log('✅ Último login atualizado');
     }
     return data;
   },
@@ -109,23 +113,24 @@ export const supabaseService = {
     if (!supabaseClient) throw new Error('Supabase not configured');
 
     try {
-      let query = supabaseClient.from('users').select('*');
+      let targetUserId = userId;
       
-      if (userId) {
-        query = query.eq('id', userId);
-      } else {
+      if (!targetUserId) {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) return null;
-        query = query.eq('id', user.id);
+        targetUserId = user.id;
       }
 
-      const { data, error } = await query.single();
+      const { data, error } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('id', targetUserId)
+        .limit(1);
       
-      if (error) return null;
+      if (error || !data || data.length === 0) return null;
       
-      return supabaseToUserProfile(data);
+      return supabaseToUserProfile(data[0]);
     } catch (error) {
-      console.error('Error getting user:', error);
       return null;
     }
   },
@@ -137,7 +142,7 @@ export const supabaseService = {
     
     if (!authUser) throw new Error('User not authenticated');
 
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('users')
       .insert({
         id: authUser.id,
@@ -151,13 +156,12 @@ export const supabaseService = {
         altura: userData.altura,
         biotipo: userData.biotipo,
         localizacao: userData.localizacao,
-      })
-      .select()
-      .single();
+      });
 
     if (error) throw error;
     
-    return supabaseToUserProfile(data);
+    // Buscar o usuário criado
+    return supabaseService.getUser(authUser.id) as Promise<UserProfile>;
   },
 
   updateUser: async (userId: string, userData: Partial<UserProfile>): Promise<UserProfile> => {
@@ -183,19 +187,18 @@ export const supabaseService = {
     
     updateData.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('users')
       .update(updateData)
-      .eq('id', userId)
-      .select()
-      .single();
+      .eq('id', userId);
 
     if (error) {
       console.error('Supabase update error:', error);
       throw new Error(error.message || 'Erro ao atualizar usuário');
     }
     
-    return supabaseToUserProfile(data);
+    // Buscar o usuário atualizado
+    return supabaseService.getUser(userId) as Promise<UserProfile>;
   },
 
   deleteUser: async (userId: string) => {
@@ -348,13 +351,34 @@ export const supabaseService = {
         notes: record.notes,
         data: record.data,
         timestamp: record.timestamp || Date.now(),
-      })
-      .select()
-      .single();
+      });
 
     if (error) throw error;
     
-    return supabaseToRecord(data);
+    // Buscar o registro criado
+    if (data && data[0]) {
+      return supabaseToRecord(data[0]);
+    }
+    
+    throw new Error('Erro ao criar registro');
+  },
+
+  getRecord: async (recordId: string): Promise<GlucoseRecord | null> => {
+    if (!supabaseClient) throw new Error('Supabase not configured');
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('glucose_records')
+        .select('*')
+        .eq('id', recordId)
+        .maybeSingle();
+        
+      if (error) return null;
+      return supabaseToRecord(data);
+    } catch (error) {
+      console.error('Error getting record:', error);
+      return null;
+    }
   },
 
   updateRecord: async (recordId: string, record: Partial<GlucoseRecord>): Promise<GlucoseRecord> => {
@@ -370,16 +394,17 @@ export const supabaseService = {
     if (record.notes) updateData.notes = record.notes;
     if (record.data) updateData.data = record.data;
 
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('glucose_records')
       .update(updateData)
-      .eq('id', recordId)
-      .select()
-      .single();
+      .eq('id', recordId);
 
     if (error) throw error;
     
-    return supabaseToRecord(data);
+    // Buscar o registro atualizado
+    const updated = await supabaseService.getRecord(recordId);
+    if (!updated) throw new Error('Erro ao buscar registro atualizado');
+    return updated;
   },
 
   deleteRecord: async (recordId: string) => {
@@ -479,13 +504,15 @@ export const supabaseService = {
         description: alert.description,
         severity: alert.severity,
         date: alert.date,
-      })
-      .select()
-      .single();
+      });
 
     if (error) throw error;
     
-    return supabaseToAlert(data);
+    if (data && data[0]) {
+      return supabaseToAlert(data[0]);
+    }
+    
+    throw new Error('Erro ao criar alerta');
   },
 
   deleteAlert: async (alertId: string): Promise<void> => {

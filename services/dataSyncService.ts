@@ -2,17 +2,55 @@
 import { supabaseService } from './supabaseService';
 
 export interface DataSnapshot {
-  user: any;
+  user: any[];
   records: any[];
   alerts: any[];
   exportedAt: string;
-  version: '1.0';
+  version: string;
 }
 
 const STORAGE_KEY = 'glicosim_data_backup';
 const LAST_SYNC_KEY = 'glicosim_last_sync';
 
 export const dataSyncService = {
+  // ===== Dashboard Stats =====
+  getDashboardStats: async (): Promise<any> => {
+    try {
+      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const records = storage.records || [];
+      const lastRecord = records[records.length - 1];
+      const avg = records.reduce((sum: number, r: any) => sum + (r.antesRefeicao || 0), 0) / (records.length || 1);
+      
+      return {
+        lastGlicemy: lastRecord?.antesRefeicao || 0,
+        average: Math.round(avg),
+        goalStatus: avg >= 55 && avg <= 100 ? 'Saudável' : 'Ajustar',
+        totalRecords: records.length,
+        alerts: storage.alerts,
+        payments: storage.payments
+      };
+    } catch (error) {
+      console.error('❌ Erro ao calcular estatísticas do dashboard:', error);
+      return {
+        lastGlicemy: 0,
+        average: 0,
+        goalStatus: 'Desconecido',
+        totalRecords: 0,
+        alerts: [],
+        payments: []
+      };
+    }
+  },
+  // ===== Registros de glicemia =====
+  getRecords: async (): Promise<any[]> => {
+    try {
+      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      return storage.records || [];
+    } catch (error) {
+      console.error('❌ Erro ao obter registros:', error);
+      return [];
+    }
+  },
   // ===== EXPORTAR DADOS =====
   exportUserData: async (userId: string, isPro: boolean = false): Promise<DataSnapshot> => {
     try {
@@ -54,7 +92,7 @@ export const dataSyncService = {
         records,
         alerts,
         exportedAt: new Date().toISOString(),
-        version: '1.0',
+        version: '1.0.0',
       };
 
       console.log('✅ Dados exportados:', snapshot);
@@ -121,7 +159,7 @@ export const dataSyncService = {
 
       // Sincronizar usuário
       if (data.user) {
-        await supabaseService.updateUser(userId, data.user);
+        await supabaseService.updateUser(userId, data.user[0].id);
       }
 
       // Sincronizar records

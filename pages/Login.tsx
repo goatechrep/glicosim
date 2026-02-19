@@ -1,16 +1,17 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { supabaseService } from '../services/supabaseService';
 
 type PasswordStrength = 'fraco' | 'medio' | 'forte' | 'muito-forte';
 
 const LoginPage: React.FC = () => {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('dolwebdesign@hotmail.com');
+  const [name, setName] = useState('Diogo Lins');
+  const [password, setPassword] = useState('Dol40sk8@');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -22,7 +23,29 @@ const LoginPage: React.FC = () => {
   const [cooldown, setCooldown] = useState(0);
   const [forgotCooldown, setForgotCooldown] = useState(0);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
+
+  // Redirecionar quando o usuário mudar
+  useEffect(() => {
+    console.log('🔄 Login - Estado mudou:', { user: !!user, loading, isOnboarded: user?.isOnboarded });
+    if (!loading && user) {
+      console.log('🔀 Redirecionando usuário...', { isOnboarded: user.isOnboarded });
+      if (!user.isOnboarded) {
+        console.log('➡️ Indo para onboarding');
+        navigate('/onboarding', { replace: true });
+      } else {
+        console.log('➡️ Indo para dashboard');
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, loading, navigate]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#111121] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const validateEmail = (email: string): boolean => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,25 +130,21 @@ const LoginPage: React.FC = () => {
     
     try {
       if (activeTab === 'register') {
-        // Criar nova conta
         if (!name.trim()) {
           setGeneralError('Por favor, insira um nome');
           setIsLoading(false);
           return;
         }
         
+        console.log('📝 Criando conta...');
         await supabaseService.signUp(email, password, name);
-        // Iniciar cooldown após sucesso
+        console.log('✅ Conta criada com sucesso');
         setCooldown(30);
-        // Após signup, redirecionar para onboarding
-        navigate('/onboarding');
       } else {
-        // Fazer login
+        console.log('🔑 Fazendo login...');
         await login(email, password);
-        // Iniciar cooldown após sucesso
+        console.log('✅ Login realizado com sucesso');
         setCooldown(30);
-        // O listener do AuthProvider vai atualizar o user e redirecionar para a home
-        // Aqui não precisamos navegar manualmente
       }
     } catch (error: any) {
       console.error('Erro durante autenticação:', error);

@@ -26,7 +26,7 @@ const Sidebar: React.FC = () => {
           <span className="material-symbols-outlined text-white text-[24px] font-bold">bloodtype</span>
         </div>
         <div>
-          <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white leading-none uppercase">Glico<span className="text-orange-600">SIM</span></h1>
+          <h1 className="text-xl font-black text-slate-900 dark:text-white leading-none">Glico<span className="text-orange-600">SIM</span></h1>
           <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest mt-1">Sua glicemia em dia!</p>
         </div>
       </div>
@@ -40,10 +40,9 @@ const Sidebar: React.FC = () => {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-                  isActive
-                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${isActive
+                  ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
                 }`
               }
               aria-current={item.path === '/' ? 'page' : undefined}
@@ -59,12 +58,12 @@ const Sidebar: React.FC = () => {
       <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800/80">
         <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 group transition-all hover:border-orange-200 dark:hover:border-orange-900/30">
           <div className="flex items-center gap-4 mb-5">
-            <div className="w-11 h-11 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 font-black text-sm border border-orange-200 dark:border-orange-800 transition-transform group-hover:scale-110">
-              {user?.nome?.[0]?.toUpperCase() || 'U'}
+            <div className="w-11 h-11 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 font-black text-sm border border-green-200 dark:border-green-800 transition-transform group-hover:scale-110">
+              {user?.plano}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.nome}</p>
-              <p className="text-[10px] text-slate-500 font-semibold truncate lowercase tracking-wide">{user?.email}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-green-600 truncate">Plano {user?.plano}</p>
+              <p className="text-[10px] text-slate-500 font-semibold truncate tracking-wide">Tema atual: {user?.theme}</p>
             </div>
           </div>
           <button

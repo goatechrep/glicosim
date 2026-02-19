@@ -144,7 +144,7 @@ export const mockService = {
     return {
       lastGlicemy: lastRecord?.antesRefeicao || 0,
       average: Math.round(avg),
-      goalStatus: avg >= 55 && avg <= 100 ? 'No Alvo' : 'Ajustar',
+      goalStatus: avg >= 55 && avg <= 100 ? 'Saudável' : 'Ajustar',
       totalRecords: records.length,
       alerts: storage.alerts,
       payments: storage.payments
