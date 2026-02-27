@@ -16,7 +16,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
   };
 
   const getDifference = () => {
-    if (!record.aposRefeicao || record.aposRefeicao === 0) return null;
+    if (record.aposRefeicao == null) return null;
     const diff = record.aposRefeicao - record.antesRefeicao;
     return diff;
   };
@@ -101,7 +101,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
           )}
         </div>
         {difference !== null && (
-          <div className={`self-start px-3 py-1 rounded-lg text-xs font-black ${
+          <div className={`self-center text-center px-3 py-1 rounded-lg text-xs font-black ${
             difference > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 
             difference < 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 
             'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
@@ -113,7 +113,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
 
       {/* Detalhes */}
       {(record.medicamento !== 'Nenhum' || record.dose !== '0') && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center justify-between gap-3">
           {record.medicamento !== 'Nenhum' && (
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-slate-400 text-[16px]" aria-hidden="true">
@@ -131,20 +131,16 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
           )}
           
           {record.dose !== '0' && (
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-400 text-[16px]" aria-hidden="true">
-                science
-              </span>
-              <div>
-                <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
-                  Dose
-                </p>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {record.dose}
-                </p>
-              </div>
+            <div className="ml-auto text-right">
+              <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
+                Dose
+              </p>
+              <p className="text-xs font-black text-slate-700 dark:text-slate-300">
+                {record.dose}
+              </p>
             </div>
           )}
+          {record.dose === '0' && <div className="ml-auto" />}
         </div>
       )}
 

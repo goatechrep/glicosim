@@ -21,6 +21,7 @@ const MedicationsPage: React.FC = () => {
   const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
     nome: '',
+    fabricante: '',
     quantidade: 0,
     unidade: 'UI' as 'UI' | 'mg' | 'co' | 'ml',
     limiteEstoque: 10
@@ -58,7 +59,7 @@ const MedicationsPage: React.FC = () => {
     }
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ nome: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
+    setFormData({ nome: '', fabricante: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
     loadMedications();
   };
 
@@ -77,12 +78,12 @@ const MedicationsPage: React.FC = () => {
       <button
         onClick={() => {
           setEditingId(null);
-          setFormData({ nome: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
+          setFormData({ nome: '', fabricante: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
           setIsModalOpen(true);
         }}
-        className="hidden md:flex fixed bottom-8 right-8 z-40 w-16 h-16 bg-orange-600 text-white rounded-full items-center justify-center border border-orange-500 active:scale-90 transition-transform"
+        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 bg-orange-600 text-white rounded-full flex items-center justify-center border border-orange-500 active:scale-90 transition-transform"
       >
-        <span className="material-symbols-outlined text-3xl">add</span>
+        <span className="material-symbols-outlined text-3xl">pill</span>
       </button>
 
       {toasts.length > 0 && (
@@ -117,7 +118,7 @@ const MedicationsPage: React.FC = () => {
           <div className="space-y-1">
             {lowStockMeds.map(m => (
               <p key={m.id} className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                {m.nome}: {m.quantidade} {m.unidade} (limite: {m.limiteEstoque})
+                {m.nome} ({m.fabricante || 'Não informado'}): {m.quantidade} {m.unidade} (limite: {m.limiteEstoque})
               </p>
             ))}
           </div>
@@ -194,6 +195,9 @@ const MedicationsPage: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">{med.nome}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                      Fabricante: {med.fabricante || 'Não informado'}
+                    </p>
                     <p className={`text-3xl font-black mt-2 ${med.quantidade <= med.limiteEstoque ? 'text-amber-600' : 'text-orange-600'}`}>
                       {med.quantidade} <span className="text-sm text-slate-400">{med.unidade}</span>
                     </p>
@@ -206,6 +210,7 @@ const MedicationsPage: React.FC = () => {
                       onClick={() => {
                         setFormData({
                           nome: med.nome,
+                          fabricante: med.fabricante || '',
                           quantidade: med.quantidade,
                           unidade: med.unidade,
                           limiteEstoque: med.limiteEstoque
@@ -240,7 +245,7 @@ const MedicationsPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-8 space-y-6">
+            <form onSubmit={handleSave} className="p-8 pb-24 md:pb-8 space-y-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Medicamento</label>
                 <input
@@ -251,6 +256,18 @@ const MedicationsPage: React.FC = () => {
                   placeholder="Ex: Insulina NPH"
                   required
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fabricante (Opcional)</label>
+                <input
+                  type="text"
+                  value={formData.fabricante}
+                  onChange={e => setFormData({...formData, fabricante: e.target.value})}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white"
+                  placeholder="Ex: Humalog"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">Se vazio, será salvo como Não informado</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

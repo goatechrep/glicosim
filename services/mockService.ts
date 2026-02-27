@@ -19,22 +19,88 @@ interface StorageState {
   alerts: Alert[];
 }
 
+type TestRecordInput = Omit<GlucoseRecord, 'id' | 'userId' | 'timestamp'>;
+
+const PERIOD_ORDER: Periodo[] = [
+  Periodo.CAFE_MANHA,
+  Periodo.ALMOCO,
+  Periodo.LANCHE,
+  Periodo.JANTAR,
+  Periodo.GLICEMIA_DEITAR
+];
+
+const PERIOD_HOUR: Record<Periodo, string> = {
+  [Periodo.CAFE_MANHA]: '08:00:00',
+  [Periodo.ALMOCO]: '12:00:00',
+  [Periodo.LANCHE]: '16:00:00',
+  [Periodo.JANTAR]: '19:00:00',
+  [Periodo.GLICEMIA_DEITAR]: '22:00:00'
+};
+
+const periodRank = (periodo: Periodo): number => PERIOD_ORDER.indexOf(periodo);
+const recordKey = (data: string, periodo: Periodo): string => `${data}::${periodo}`;
+
+const buildTimestamp = (dateISO: string, periodo: Periodo, offset = 0): number =>
+  new Date(`${dateISO}T${PERIOD_HOUR[periodo]}`).getTime() + offset;
+
+const buildTestRecordInputs = (): TestRecordInput[] => {
+  const inputs: TestRecordInput[] = [];
+  const now = new Date();
+  const variationCycle = [-18, -12, -8, -5, -2, 0, 4, 8, 12, 18, 24, 28];
+
+  for (let dayIndex = 0; dayIndex < 30; dayIndex += 1) {
+    const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30 + dayIndex);
+    const base = 200;
+    const variation = variationCycle[dayIndex % variationCycle.length];
+    const dateISO = cursor.toISOString().split('T')[0];
+    const dayIsHigh = base + variation >= 220;
+    const dayNote = dayIsHigh
+      ? 'comi demais hoje'
+      : dayIndex % 5 === 0
+        ? 'hidratacao baixa no periodo'
+        : '';
+
+    PERIOD_ORDER.forEach((periodo, periodIndex) => {
+      const before = base + variation + periodIndex * 2;
+      const after = before + (6 + (periodIndex % 3) * 2);
+      inputs.push({
+        periodo,
+        medicamento: Medicamento.HUMALOG,
+        antesRefeicao: before,
+        aposRefeicao: after,
+        dose: '6 UI',
+        notes: dayNote,
+        data: dateISO
+      });
+    });
+  }
+
+  return inputs.sort((a, b) => {
+    const dateCmp = a.data.localeCompare(b.data);
+    if (dateCmp !== 0) return dateCmp;
+    return periodRank(a.periodo) - periodRank(b.periodo);
+  });
+};
+
+const buildSeedRecords = (): GlucoseRecord[] => {
+  const records: GlucoseRecord[] = [];
+  const inputs = buildTestRecordInputs();
+  inputs.forEach((input, index) => {
+    const dateISO = input.data;
+    records.push({
+      id: `seed-${index + 1}`,
+      userId: 'user-1',
+      ...input,
+      timestamp: buildTimestamp(dateISO, input.periodo, index)
+    });
+  });
+
+  return records;
+};
+
 const SEED_DATA: StorageState = {
   user: null,
-  records: [
-    {
-      id: '1',
-      userId: 'user-1',
-      periodo: Periodo.CAFE_MANHA,
-      medicamento: Medicamento.NENHUM,
-      antesRefeicao: 95,
-      aposRefeicao: 120,
-      dose: 'N/A',
-      notes: 'Registro inicial de teste',
-      data: new Date().toISOString().split('T')[0],
-      timestamp: Date.now() - 86400000
-    }
-  ],
+  records: buildSeedRecords(),
   payments: [
     { id: 'p1', date: '2023-10-01', amount: 0, status: 'PAGO', plan: 'Free' },
     { id: 'p2', date: '2023-11-01', amount: 0, status: 'PAGO', plan: 'Free' }
@@ -116,6 +182,47 @@ export const mockService = {
     storage.records.push(newRecord);
     setStorage(storage);
     return newRecord;
+  },
+  addTestRecords: async (): Promise<number> => {
+    await delay(300);
+    const storage = getStorage();
+    const inputs = buildTestRecordInputs();
+    const existingByKey = new Map<string, GlucoseRecord>();
+    storage.records.forEach(record => {
+      existingByKey.set(recordKey(record.data, record.periodo), record);
+    });
+
+    let affected = 0;
+    const userId = storage.user?.id || 'guest';
+    inputs.forEach((record, index) => {
+      const key = recordKey(record.data, record.periodo);
+      const existing = existingByKey.get(key);
+      if (existing) {
+        const updated: GlucoseRecord = {
+          ...existing,
+          ...record,
+          userId: existing.userId || userId,
+          timestamp: buildTimestamp(record.data, record.periodo, index)
+        };
+        const storageIndex = storage.records.findIndex(r => r.id === existing.id);
+        if (storageIndex >= 0) {
+          storage.records[storageIndex] = updated;
+          affected += 1;
+        }
+        return;
+      }
+
+      storage.records.push({
+        ...record,
+        id: `test-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+        userId,
+        timestamp: buildTimestamp(record.data, record.periodo, index)
+      });
+      affected += 1;
+    });
+
+    setStorage(storage);
+    return affected;
   },
   updateRecord: async (id: string, record: Partial<GlucoseRecord>): Promise<GlucoseRecord> => {
     await delay(400);

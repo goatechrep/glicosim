@@ -19,6 +19,7 @@ const UpdatesPage = lazy(() => import('./pages/Updates'));
 // Components
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Loading fallback
 const PageLoader: React.FC = () => (
@@ -395,6 +396,7 @@ const App: React.FC = () => {
               } />
             </Routes>
           </div>
+          <PWAInstallPrompt />
         </div>
       </HashRouter>
       <style>{`

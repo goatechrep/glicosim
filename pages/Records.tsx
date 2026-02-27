@@ -35,6 +35,8 @@ const RecordsPage: React.FC = () => {
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [showDeleteMultipleModal, setShowDeleteMultipleModal] = useState(false);
   const [medications, setMedications] = useState<any[]>([]);
+  const [isClearingRecords, setIsClearingRecords] = useState(false);
+  const [isInsertingTestRecords, setIsInsertingTestRecords] = useState(false);
 
   const [filterPeriodo, setFilterPeriodo] = useState<string>('Todos');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
@@ -43,16 +45,16 @@ const RecordsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  const [doseValue, setDoseValue] = useState<string>('0');
+  const [doseValue, setDoseValue] = useState<string>('6');
   const [doseUnit, setDoseUnit] = useState<string>('UI');
   const [doseError, setDoseError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
     periodo: Periodo.CAFE_MANHA,
-    medicamento: '',
+    medicamento: Medicamento.HUMALOG,
     antesRefeicao: 0,
     aposRefeicao: 0,
-    dose: '0',
+    dose: '6 UI',
     notes: '',
     data: new Date().toISOString().split('T')[0]
   });
@@ -64,7 +66,7 @@ const RecordsPage: React.FC = () => {
     [Periodo.ALMOCO]: '12:00',
     [Periodo.LANCHE]: '16:00',
     [Periodo.JANTAR]: '19:00',
-    'Ao Deitar': '22:00'
+    [Periodo.GLICEMIA_DEITAR]: '22:00'
   };
 
   useEffect(() => {
@@ -73,13 +75,13 @@ const RecordsPage: React.FC = () => {
       setEditingId(null);
       setFormData({
         periodo: Periodo.CAFE_MANHA,
-        medicamento: Medicamento.NENHUM,
+        medicamento: Medicamento.HUMALOG,
         antesRefeicao: 100,
-        dose: '0',
+        dose: '6 UI',
         notes: '',
         data: new Date().toISOString().split('T')[0]
       });
-      setDoseValue('0');
+      setDoseValue('6');
       setDoseUnit('UI');
       setIsModalOpen(true);
       navigate('/registros', { replace: true });
@@ -123,6 +125,15 @@ const RecordsPage: React.FC = () => {
       return matchPeriodo && matchDateStart && matchDateEnd && matchSearch;
     });
   }, [records, filterPeriodo, filterDateStart, filterDateEnd, debouncedSearch]);
+
+  const escapeHtml = (value: string): string => (
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  );
 
   // Funcionalidade de Exportação CSV
   const exportToCSV = () => {
@@ -229,53 +240,140 @@ const RecordsPage: React.FC = () => {
       return;
     }
 
+    const empty = { antes: '-', apos: '-', dose: '-' };
+    type MealRow = { antes: string; apos: string; dose: string };
+    type ReportRow = {
+      dataISO: string;
+      data: string;
+      cafe: MealRow;
+      almoco: MealRow;
+      lanche: MealRow;
+      jantar: MealRow;
+      deitar: string;
+      obs: string;
+    };
+
+    const byDate = new Map<string, ReportRow>();
+
+    filteredRecords.forEach(record => {
+      const dateISO = record.data;
+      if (!byDate.has(dateISO)) {
+        byDate.set(dateISO, {
+          dataISO: dateISO,
+          data: dateISO.split('-').reverse().join('/'),
+          cafe: { ...empty },
+          almoco: { ...empty },
+          lanche: { ...empty },
+          jantar: { ...empty },
+          deitar: '-',
+          obs: '-'
+        });
+      }
+
+      const row = byDate.get(dateISO)!;
+      const note = record.notes?.trim();
+      if (note) {
+        row.obs = row.obs === '-' ? note : `${row.obs} | ${note}`;
+      }
+
+      const filled = {
+        antes: record.antesRefeicao != null ? String(record.antesRefeicao) : '-',
+        apos: record.aposRefeicao != null ? String(record.aposRefeicao) : '-',
+        dose: record.dose?.trim() ? record.dose : '-'
+      };
+
+      if (record.periodo === Periodo.CAFE_MANHA) row.cafe = filled;
+      if (record.periodo === Periodo.ALMOCO) row.almoco = filled;
+      if (record.periodo === Periodo.LANCHE) row.lanche = filled;
+      if (record.periodo === Periodo.JANTAR) row.jantar = filled;
+      if (record.periodo === Periodo.GLICEMIA_DEITAR) {
+        row.deitar = record.aposRefeicao != null
+          ? String(record.aposRefeicao)
+          : String(record.antesRefeicao ?? '-');
+      }
+    });
+
+    const amgRows = Array.from(byDate.values()).sort((a, b) => b.dataISO.localeCompare(a.dataISO));
+
     const htmlContent = `
       <html>
         <head>
-          <title>Relatório Glicêmico - GlicoSIM</title>
+          <title>Relatório AMG - GlicoSIM</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: white; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ea580c; padding-bottom: 20px; margin-bottom: 30px; }
-            .logo { font-weight: 900; font-size: 24px; color: #ea580c; text-transform: uppercase; letter-spacing: -0.05em; }
-            .user-info { text-align: right; }
-            .user-info p { margin: 0; font-size: 12px; font-weight: bold; color: #64748b; }
-            h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 0.05em; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #f8fafc; text-align: left; padding: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid #e2e8f0; }
-            td { padding: 12px; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
-            .val { font-weight: 900; color: #ea580c; }
-            .footer { margin-top: 50px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+            @page { size: A4 landscape; margin: 10mm; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Inter', sans-serif; color: #111827; background: white; margin: 0; }
+            .header { margin-bottom: 12px; }
+            .title { text-align: center; font-size: 16px; font-weight: 900; margin-bottom: 8px; }
+            .meta { display: flex; justify-content: space-between; font-size: 10px; color: #374151; margin-bottom: 8px; gap: 8px; }
+            .meta p { margin: 0; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            thead tr.group th { background: #7a7a7a; color: white; font-size: 9px; padding: 6px 4px; border: 1px solid #4b5563; text-align: center; }
+            thead tr.sub th { background: #d1d5db; color: #111827; font-size: 8px; padding: 5px 3px; border: 1px solid #9ca3af; text-align: center; }
+            tbody tr:nth-child(even) { background: #f3f4f6; }
+            td { border: 1px solid #9ca3af; padding: 4px 3px; font-size: 8px; text-align: center; vertical-align: middle; page-break-inside: avoid; }
+            td.obs { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .date-col { width: 8%; }
+            .metric-col { width: 5.4%; }
+            .sleep-col { width: 5.8%; }
+            .obs-col { width: 8.6%; }
+            .footer { margin-top: 8px; font-size: 8px; color: #6b7280; text-align: center; }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="logo">GlicoSIM</div>
-            <div class="user-info">
-              <p>Paciente: ${user?.nome || 'Não identificado'}</p>
-              <p>Email: ${user?.email || '-'}</p>
-              <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+            <div class="title">Automonitoração da Glicemia Capilar (AMG)</div>
+            <div class="meta">
+              <p><strong>Paciente:</strong> ${escapeHtml(user?.nome || 'Não identificado')}</p>
+              <p><strong>Email:</strong> ${escapeHtml(user?.email || '-')}</p>
+              <p><strong>Gerado em:</strong> ${new Date().toLocaleString('pt-BR')}</p>
             </div>
           </div>
-          <h1>Relatório de Monitoramento Glicêmico</h1>
           <table>
             <thead>
-              <tr>
-                <th>Data</th>
-                <th>Período</th>
-                <th>Valor (mg/dL)</th>
-                <th>Dose Aplicada</th>
-                <th>Medicamento</th>
+              <tr class="group">
+                <th rowspan="2" class="date-col">Dia/Mês/Ano</th>
+                <th colspan="3">Café da Manhã</th>
+                <th colspan="3">Almoço</th>
+                <th colspan="3">Lanche</th>
+                <th colspan="3">Jantar</th>
+                <th rowspan="2" class="sleep-col">Glicemia ao deitar</th>
+                <th rowspan="2" class="obs-col">Obs.</th>
+              </tr>
+              <tr class="sub">
+                <th class="metric-col">Antes</th>
+                <th class="metric-col">2h após</th>
+                <th class="metric-col">Dose insulina (unidade)</th>
+                <th class="metric-col">Antes</th>
+                <th class="metric-col">2h após</th>
+                <th class="metric-col">Dose insulina (unidade)</th>
+                <th class="metric-col">Antes</th>
+                <th class="metric-col">2h após</th>
+                <th class="metric-col">Dose insulina (unidade)</th>
+                <th class="metric-col">Antes</th>
+                <th class="metric-col">2h após</th>
+                <th class="metric-col">Dose insulina (unidade)</th>
               </tr>
             </thead>
             <tbody>
-              ${filteredRecords.map(r => `
+              ${amgRows.map(row => `
                 <tr>
-                  <td>${r.data.split('-').reverse().join('/')}</td>
-                  <td>${r.periodo}</td>
-                  <td class="val">${r.antesRefeicao}</td>
-                  <td>${r.dose || '-'}</td>
-                  <td>${r.medicamento}</td>
+                  <td>${row.data}</td>
+                  <td>${row.cafe.antes}</td>
+                  <td>${row.cafe.apos}</td>
+                  <td>${escapeHtml(row.cafe.dose)}</td>
+                  <td>${row.almoco.antes}</td>
+                  <td>${row.almoco.apos}</td>
+                  <td>${escapeHtml(row.almoco.dose)}</td>
+                  <td>${row.lanche.antes}</td>
+                  <td>${row.lanche.apos}</td>
+                  <td>${escapeHtml(row.lanche.dose)}</td>
+                  <td>${row.jantar.antes}</td>
+                  <td>${row.jantar.apos}</td>
+                  <td>${escapeHtml(row.jantar.dose)}</td>
+                  <td>${row.deitar}</td>
+                  <td class="obs">${escapeHtml(row.obs)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -297,11 +395,47 @@ const RecordsPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const error = validateDose(doseValue, doseUnit);
-    if (error) { setDoseError(error); return; }
+    const selectedPeriodo = formData.periodo as Periodo | undefined;
+    const isSleepPeriod = selectedPeriodo === Periodo.GLICEMIA_DEITAR;
 
-    const finalDose = `${doseValue} ${doseUnit}`;
-    const dataToSave = { ...formData, dose: finalDose };
+    if (!formData.data || !selectedPeriodo) {
+      addToast("Preencha data e período.", "error");
+      return;
+    }
+
+    if (formData.antesRefeicao == null || Number.isNaN(Number(formData.antesRefeicao))) {
+      addToast("Campo 'Antes' é obrigatório.", "error");
+      return;
+    }
+
+    if (!isSleepPeriod && (formData.aposRefeicao == null || Number.isNaN(Number(formData.aposRefeicao)))) {
+      addToast("Campo '2h após' é obrigatório.", "error");
+      return;
+    }
+
+    if (!isSleepPeriod && !doseValue.trim()) {
+      setDoseError("Informe a dose");
+      addToast("Campo 'Dose' é obrigatório.", "error");
+      return;
+    }
+
+    if (!isSleepPeriod) {
+      const error = validateDose(doseValue, doseUnit);
+      if (error) { setDoseError(error); return; }
+    }
+
+    const isDuplicate = records.some(record =>
+      record.data === formData.data &&
+      record.periodo === selectedPeriodo &&
+      record.id !== editingId
+    );
+    if (isDuplicate) {
+      addToast("Já existe registro para esta data e período.", "error");
+      return;
+    }
+
+    const finalDose = isSleepPeriod ? '0 UI' : `${doseValue} ${doseUnit}`;
+    const dataToSave = { ...formData, periodo: selectedPeriodo, dose: finalDose };
 
     try {
       let savedRecordId = editingId;
@@ -315,12 +449,12 @@ const RecordsPage: React.FC = () => {
       }
       
       // Criar lembrete se 2h após não preenchido
-      if (formData.periodo !== 'Ao Deitar' && !formData.aposRefeicao && savedRecordId) {
+      if (selectedPeriodo !== Periodo.GLICEMIA_DEITAR && formData.aposRefeicao == null && savedRecordId) {
         reminderService.createReminder(savedRecordId, dataToSave);
       }
       
       // Atualizar estoque de medicamentos
-      if (formData.medicamento && formData.medicamento !== 'Nenhum' && formData.periodo !== 'Ao Deitar') {
+      if (formData.medicamento && formData.medicamento !== 'Nenhum' && selectedPeriodo !== Periodo.GLICEMIA_DEITAR) {
         const quantidade = parseFloat(doseValue.replace(',', '.'));
         const success = medicationService.decreaseStock(formData.medicamento, quantidade, doseUnit);
         if (!success) {
@@ -399,6 +533,8 @@ const RecordsPage: React.FC = () => {
     }
 
     try {
+      setIsClearingRecords(true);
+      addToast("Limpando registros...");
       for (const record of records) {
         await mockService.deleteRecord(record.id);
       }
@@ -407,6 +543,22 @@ const RecordsPage: React.FC = () => {
       await loadRecords();
     } catch (error) {
       addToast("Erro ao limpar registros.", "error");
+    } finally {
+      setIsClearingRecords(false);
+    }
+  };
+
+  const handleInsertTestRecords = async () => {
+    try {
+      setIsInsertingTestRecords(true);
+      addToast("Inserindo dados de teste...");
+      const inserted = await mockService.addTestRecords();
+      addToast(`${inserted} registros de teste inseridos!`, "success");
+      await loadRecords();
+    } catch (error) {
+      addToast("Erro ao inserir registros de teste.", "error");
+    } finally {
+      setIsInsertingTestRecords(false);
     }
   };
 
@@ -459,9 +611,10 @@ const RecordsPage: React.FC = () => {
 
   useEffect(() => {
     if (isModalOpen) {
-      const { value, unit } = parseDoseString(editingId ? formData.dose || '0' : '0');
-      setDoseValue(value);
-      setDoseUnit(unit);
+      const defaultDose = editingId ? (formData.dose || '6 UI') : '6 UI';
+      const parsed = parseDoseString(defaultDose);
+      setDoseValue(parsed.value);
+      setDoseUnit(parsed.unit);
       setDoseError(null);
     }
   }, [isModalOpen, editingId]);
@@ -474,13 +627,13 @@ const RecordsPage: React.FC = () => {
           setEditingId(null);
           setFormData({
             periodo: Periodo.CAFE_MANHA,
-            medicamento: '',
+            medicamento: Medicamento.HUMALOG,
             antesRefeicao: 100,
-            dose: '0',
+            dose: '6 UI',
             notes: '',
             data: new Date().toISOString().split('T')[0]
           });
-          setDoseValue('0');
+          setDoseValue('6');
           setDoseUnit('UI');
           setIsModalOpen(true);
         }}
@@ -533,6 +686,24 @@ const RecordsPage: React.FC = () => {
           </div>
           <div className="sm:hidden flex gap-2 w-full">
             <button 
+              onClick={handleInsertTestRecords}
+              disabled={isInsertingTestRecords || isClearingRecords}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95"
+              title="Inserir dados de teste"
+            >
+              <span className="material-symbols-outlined text-[16px]">science</span>
+              <span>{isInsertingTestRecords ? 'Inserindo...' : 'Teste'}</span>
+            </button>
+            <button 
+              onClick={handleClearAllRecords}
+              disabled={isClearingRecords || isInsertingTestRecords}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+              title="Limpar banco de registros"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete_forever</span>
+              <span>{isClearingRecords ? 'Limpando...' : 'Limpar'}</span>
+            </button>
+            <button 
               onClick={exportToJSON}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
               title="Exportar JSON"
@@ -551,6 +722,24 @@ const RecordsPage: React.FC = () => {
           </div>
           {/* Desktop: Botões com texto */}
           <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            <button 
+              onClick={handleInsertTestRecords}
+              disabled={isInsertingTestRecords || isClearingRecords}
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+              title="Inserir dados de teste"
+            >
+              <span className="material-symbols-outlined text-[14px]">science</span>
+              <span className="hidden md:inline">{isInsertingTestRecords ? 'Inserindo...' : 'Teste'}</span>
+            </button>
+            <button 
+              onClick={handleClearAllRecords}
+              disabled={isClearingRecords || isInsertingTestRecords}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+              title="Limpar banco de registros"
+            >
+              <span className="material-symbols-outlined text-[14px]">delete_forever</span>
+              <span className="hidden md:inline">{isClearingRecords ? 'Limpando...' : 'Limpar Banco'}</span>
+            </button>
             <button 
               onClick={exportToCSV}
               className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
@@ -625,11 +814,12 @@ const RecordsPage: React.FC = () => {
                   handleClearAllRecords();
                 }
               }}
+              disabled={isClearingRecords || isInsertingTestRecords}
               className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all active:scale-95 ml-auto"
               title="Limpar todos os registros"
             >
               <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-              <span className="hidden lg:inline">Limpar Tudo</span>
+              <span className="hidden lg:inline">{isClearingRecords ? 'Limpando...' : 'Limpar Tudo'}</span>
             </button>
           )}
         </div>
@@ -754,7 +944,7 @@ const RecordsPage: React.FC = () => {
                         <span className="inline-flex px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/20 text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase">{rec.periodo}</span>
                       </td>
                       <td className="px-6 py-4 font-black text-orange-600 dark:text-orange-400">{rec.antesRefeicao} <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span></td>
-                      <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400">{rec.aposRefeicao || '-'} {rec.aposRefeicao ? <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span> : ''}</td>
+                      <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400">{rec.aposRefeicao ?? '-'} {rec.aposRefeicao != null ? <span className="text-[9px] text-slate-500 dark:text-slate-400 ml-1">mg/dL</span> : ''}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1">
                           <button 
@@ -823,8 +1013,8 @@ const RecordsPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSave} className="p-8 pb-24 md:pb-8 space-y-6 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
                   <input type="date" value={formData.data} onChange={e => setFormData({...formData, data: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" required />
@@ -836,7 +1026,7 @@ const RecordsPage: React.FC = () => {
                     <option value={Periodo.ALMOCO}>Almoço</option>
                     <option value={Periodo.LANCHE}>Lanche</option>
                     <option value={Periodo.JANTAR}>Jantar</option>
-                    <option value="Ao Deitar">Ao Deitar</option>
+                    <option value={Periodo.GLICEMIA_DEITAR}>Ao Deitar</option>
                   </select>
                 </div>
               </div>
@@ -853,12 +1043,11 @@ const RecordsPage: React.FC = () => {
                   min="0" 
                   max="500" 
                   step="1"
-                  value={formData.antesRefeicao || ''} 
+                  value={formData.antesRefeicao ?? ''} 
                   onChange={e => {
-                    const val = Number(e.target.value);
                     if (e.target.value.length > 3) return;
-                    const settings = settingsService.getSettings();
-                    setFormData({...formData, antesRefeicao: val});
+                    const value = e.target.value;
+                    setFormData({...formData, antesRefeicao: value === '' ? undefined : Number(value)});
                   }} 
                   onBlur={e => {
                     const val = Number(e.target.value);
@@ -875,7 +1064,7 @@ const RecordsPage: React.FC = () => {
                 />
               </div>
 
-              {formData.periodo !== 'Ao Deitar' && (
+              {formData.periodo !== Periodo.GLICEMIA_DEITAR && (
                 <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg border border-slate-100 dark:border-slate-800">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
                   <input 
@@ -883,11 +1072,11 @@ const RecordsPage: React.FC = () => {
                     min="0" 
                     max="500" 
                     step="1"
-                    value={formData.aposRefeicao || ''} 
+                    value={formData.aposRefeicao ?? ''} 
                     onChange={e => {
-                      const val = Number(e.target.value);
                       if (e.target.value.length > 3) return;
-                      setFormData({...formData, aposRefeicao: val});
+                      const value = e.target.value;
+                      setFormData({...formData, aposRefeicao: value === '' ? undefined : Number(value)});
                     }} 
                     onBlur={e => {
                       const val = Number(e.target.value);
@@ -898,13 +1087,14 @@ const RecordsPage: React.FC = () => {
                         alert('⚠️ ATENÇÃO: Glicemia muito baixa!\n\n🍬 Consuma açúcar ou suco imediatamente\n💉 Lave as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
                       }
                     }}
-                    className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" 
+                    className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
+                    required
                     placeholder="0" 
                   />
                 </div>
               )}
 
-              {formData.periodo !== 'Ao Deitar' && (
+              {formData.periodo !== Periodo.GLICEMIA_DEITAR && (
                 <>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</label>
@@ -912,7 +1102,7 @@ const RecordsPage: React.FC = () => {
                       <option value="">Selecione um medicamento</option>
                       {medications.map(med => (
                         <option key={med.id} value={med.nome}>
-                          {med.nome} ({med.quantidade} {med.unidade})
+                          {med.nome} - {med.fabricante || 'Não informado'} ({med.quantidade} {med.unidade})
                         </option>
                       ))}
                       <option value="Nenhum">Nenhum</option>
@@ -927,22 +1117,20 @@ const RecordsPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {formData.medicamento && formData.medicamento !== 'Nenhum' && formData.medicamento !== '' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dose</label>
-                        <input type="text" value={doseValue} onChange={e => { setDoseValue(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" placeholder="0" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                        <select value={doseUnit} onChange={e => { setDoseUnit(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
-                          <option value="UI">UI</option>
-                          <option value="mg">mg</option>
-                          <option value="ml">ml</option>
-                        </select>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dose</label>
+                      <input type="text" value={doseValue} onChange={e => { setDoseValue(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" placeholder="0" required />
                     </div>
-                  )}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                      <select value={doseUnit} onChange={e => { setDoseUnit(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                        <option value="UI">UI</option>
+                        <option value="mg">mg</option>
+                        <option value="ml">ml</option>
+                      </select>
+                    </div>
+                  </div>
                   {doseError && <p className="text-red-500 text-xs font-bold">{doseError}</p>}
                 </>
               )}

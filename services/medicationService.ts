@@ -5,13 +5,19 @@ const MEDICATIONS_KEY = 'glicosim_medications';
 export const medicationService = {
   getMedications: (): Medication[] => {
     const data = localStorage.getItem(MEDICATIONS_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data) as Partial<Medication>[];
+    return parsed.map(med => ({
+      ...(med as Medication),
+      fabricante: med.fabricante?.trim() ? med.fabricante.trim() : 'Não informado'
+    }));
   },
 
   saveMedication: (medication: Omit<Medication, 'id' | 'createdAt'>): void => {
     const medications = medicationService.getMedications();
     const newMed: Medication = {
       ...medication,
+      fabricante: medication.fabricante?.trim() ? medication.fabricante.trim() : 'Não informado',
       id: Date.now().toString(),
       createdAt: new Date().toISOString()
     };
@@ -23,7 +29,11 @@ export const medicationService = {
     const medications = medicationService.getMedications();
     const index = medications.findIndex(m => m.id === id);
     if (index !== -1) {
-      medications[index] = { ...medications[index], ...updates };
+      const merged = { ...medications[index], ...updates };
+      medications[index] = {
+        ...merged,
+        fabricante: merged.fabricante?.trim() ? merged.fabricante.trim() : 'Não informado'
+      };
       localStorage.setItem(MEDICATIONS_KEY, JSON.stringify(medications));
     }
   },
