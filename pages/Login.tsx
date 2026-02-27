@@ -205,7 +205,7 @@ const LoginPage: React.FC = () => {
               <span className="material-symbols-outlined text-white text-4xl">bloodtype</span>
            </div>
            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Glico<span className="text-orange-600">SIM</span></h1>
-           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle sua glicemia todo dia.</p>
+           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle sua glicemia todo dia de forma prática e rápida. SIMples assim!</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-lg overflow-hidden">
