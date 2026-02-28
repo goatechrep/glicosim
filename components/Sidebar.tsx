@@ -33,64 +33,68 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-2">
-        <p className="px-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.25em] mb-6">Menu de Controle</p>
-        <nav className="space-y-2" aria-label="Menu principal">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${isActive
-                  ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
-                }`
-              }
-              aria-current={item.path === '/' ? 'page' : undefined}
-            >
-              <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="space-y-1 overflow-y-auto custom-scrollbar pr-2">
+          <p className="px-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.25em] mb-6">Menu de Controle</p>
+          <nav className="space-y-2" aria-label="Menu principal">
+            {menuItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${isActive
+                    ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 active'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-900/40'
+                  }`
+                }
+                aria-current={item.path === '/' ? 'page' : undefined}
+              >
+                <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{item.icon}</span>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
 
-      {/* Banner Upgrade PRO */}
-      {user?.plano !== 'PRO' && (() => {
-        const proPlan = getPlanById('PRO');
-        return (
-        <div className="hidden md:block bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
-          <div className="relative z-10 text-center">
-            <h3 className="text-[22px] font-black uppercase mb-1">Atualize para {proPlan?.nome}</h3>
-            <p className="text-orange-100 text-[10px] mb-3">{proPlan?.descricao}</p>
-            <div className="flex items-baseline justify-center gap-1 mb-3">
-              <span className="text-2xl font-black">{getFormattedPrice(proPlan!)}</span>
-              <span className="text-orange-200 text-xs">/{proPlan?.periodo}</span>
+        <div className="mt-4">
+          {/* Banner Upgrade PRO */}
+          {user?.plano !== 'PRO' && (() => {
+            const proPlan = getPlanById('PRO');
+            return (
+            <div className="hidden md:block bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
+              <div className="relative z-10 text-center">
+                <h3 className="text-[22px] font-black uppercase mb-1">Atualize para {proPlan?.nome}</h3>
+                <p className="text-orange-100 text-[10px] mb-3">{proPlan?.descricao}</p>
+                <div className="flex items-baseline justify-center gap-1 mb-3">
+                  <span className="text-2xl font-black">{getFormattedPrice(proPlan!)}</span>
+                  <span className="text-orange-200 text-xs">/{proPlan?.periodo}</span>
+                </div>
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 font-black text-[10px] uppercase rounded-lg hover:bg-orange-50 transition-all">
+                    <span>Conhecer Plano PRO</span>
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
             </div>
-            <div className="flex justify-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 font-black text-[10px] uppercase rounded-lg hover:bg-orange-50 transition-all">
-                <span>Conhecer Plano PRO</span>
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            );
+          })()}
+          {/* Mobile: AdSense ao invés de banner PRO */}
+          {user?.plano !== 'PRO' && (
+            <div className="md:hidden bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
+              <div className="mt-4 h-24 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                <span className="text-slate-400 text-sm">Anúncio 320x100</span>
               </div>
             </div>
-          </div>
-          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+          )}
         </div>
-        );
-      })()}
-      {/* Mobile: AdSense ao invés de banner PRO */}
-      {user?.plano !== 'PRO' && (
-        <div className="md:hidden bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
-          <div className="mt-4 h-24 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-            <span className="text-slate-400 text-sm">Anúncio 320x100</span>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Perfil fixado no fim da tela */}
-      <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800/80">
+      <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/80">
         <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 group transition-all hover:border-orange-200 dark:hover:border-orange-900/30">
           <div className="flex items-center gap-3 mb-4">
             {user?.foto ? (
@@ -114,7 +118,7 @@ const Sidebar: React.FC = () => {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             aria-label="Sair da aplicação"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>

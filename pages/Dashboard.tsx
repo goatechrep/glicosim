@@ -13,6 +13,8 @@ import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { getAdSenseBlock } from '../data/adsense';
 import { getPlanById, getFormattedPrice } from '../data/plans';
 import { getBannersForPage } from '../data/banners';
+import { healthTipsService } from '../services/healthTipsService';
+import { HealthTipArticle } from '../data/healthTips';
 
 const getGlycemiaStatus = (value: number) => {
   if (value > 180) return { label: 'Muito Alta', color: 'text-red-600 dark:text-red-400' };
@@ -36,6 +38,40 @@ const formatDateBR = (iso: string) => {
   return date.toLocaleDateString('pt-BR');
 };
 
+const normalizeDateKey = (raw: string): string | null => {
+  if (!raw || typeof raw !== 'string') return null;
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+};
+
+const getTipCategoryLabel = (category: HealthTipArticle['category']) => {
+  switch (category) {
+    case 'hidratacao': return 'Hidratação';
+    case 'alimentacao': return 'Alimentação';
+    case 'atividade': return 'Atividade';
+    case 'monitoramento': return 'Monitoramento';
+    case 'bem-estar': return 'Bem-estar';
+    default: return 'Saúde';
+  }
+};
+
+const getTipCategoryClasses = (category: HealthTipArticle['category']) => {
+  switch (category) {
+    case 'hidratacao':
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+    case 'alimentacao':
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+    case 'atividade':
+      return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300';
+    case 'monitoramento':
+      return 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300';
+    case 'bem-estar':
+      return 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300';
+    default:
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+  }
+};
+
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<any>(null);
@@ -51,6 +87,7 @@ const DashboardPage: React.FC = () => {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [healthTickerItems, setHealthTickerItems] = useState<HealthTipArticle[]>([]);
   const banners = getBannersForPage('dashboard');
 
   useEffect(() => {
@@ -76,6 +113,14 @@ const DashboardPage: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [banners.length]);
+
+  useEffect(() => {
+    const loadHealthTicker = async () => {
+      const tips = await healthTipsService.getAll();
+      setHealthTickerItems(tips);
+    };
+    loadHealthTicker();
+  }, []);
 
   const handleSync = async () => {
     if (!isOnline || user?.plano !== 'PRO' || syncing || !user?.id) return;
@@ -142,7 +187,7 @@ const DashboardPage: React.FC = () => {
   const periodOptions = useMemo(() => [
     { value: '7d' as const, label: '7 dias', days: 7 },
     { value: '30d' as const, label: '30 dias', days: 30 },
-    { value: '90d' as const, label: '3 meses', days: 90 },
+    { value: '90d' as const, label: '90 dias', days: 90 },
   ], []);
 
   const chartData = useMemo(() => {
@@ -154,12 +199,14 @@ const DashboardPage: React.FC = () => {
 
     const grouped = new Map<string, number[]>();
     records.forEach((record) => {
-      if (!record?.data || typeof record.antesRefeicao !== 'number') return;
-      const recordDate = parseISODate(record.data);
+      if (typeof record?.antesRefeicao !== 'number') return;
+      const dateKey = normalizeDateKey(record.data);
+      if (!dateKey) return;
+      const recordDate = parseISODate(dateKey);
       if (!recordDate) return;
       if (recordDate < startDate || recordDate > endDate) return;
-      if (!grouped.has(record.data)) grouped.set(record.data, []);
-      grouped.get(record.data)!.push(record.antesRefeicao);
+      if (!grouped.has(dateKey)) grouped.set(dateKey, []);
+      grouped.get(dateKey)!.push(record.antesRefeicao);
     });
 
     let sortedDates = Array.from(grouped.keys()).sort((a, b) => {
@@ -170,9 +217,11 @@ const DashboardPage: React.FC = () => {
     if (sortedDates.length === 0) {
       // fallback quando nao ha dados no intervalo atual: usa os ultimos dias com registro
       records.forEach((record) => {
-        if (!record?.data || typeof record.antesRefeicao !== 'number') return;
-        if (!grouped.has(record.data)) grouped.set(record.data, []);
-        grouped.get(record.data)!.push(record.antesRefeicao);
+        if (typeof record?.antesRefeicao !== 'number') return;
+        const dateKey = normalizeDateKey(record.data);
+        if (!dateKey) return;
+        if (!grouped.has(dateKey)) grouped.set(dateKey, []);
+        grouped.get(dateKey)!.push(record.antesRefeicao);
       });
       sortedDates = Array.from(grouped.keys()).sort((a, b) => {
         const da = parseISODate(a)?.getTime() || 0;
@@ -185,21 +234,32 @@ const DashboardPage: React.FC = () => {
       const values = grouped.get(dateISO) || [];
       const min = Math.min(...values);
       const max = Math.max(...values);
-      const avgRaw = values.reduce((acc, value) => acc + value, 0) / values.length;
+      const sum = values.reduce((acc, value) => acc + value, 0);
+      const avgRaw = sum / values.length;
       const avg = Math.round(avgRaw);
 
       return {
         dateISO,
         name: formatDateBR(dateISO),
         val: avg,
+        sum,
         min,
         max,
         count: values.length
       };
     });
 
-    const periodAvg = tempRows.length
-      ? Math.round(tempRows.reduce((acc, row) => acc + row.val, 0) / tempRows.length)
+    const periodTotals = tempRows.reduce(
+      (acc, row) => {
+        acc.sum += row.sum;
+        acc.count += row.count;
+        return acc;
+      },
+      { sum: 0, count: 0 }
+    );
+
+    const periodAvg = periodTotals.count
+      ? Math.round(periodTotals.sum / periodTotals.count)
       : 0;
 
     return tempRows.map(row => ({
@@ -211,8 +271,16 @@ const DashboardPage: React.FC = () => {
 
   const chartInsights = useMemo(() => {
     if (!chartData.length) return null;
+    const totals = chartData.reduce(
+      (acc, point: any) => {
+        acc.sum += point.sum;
+        acc.count += point.count;
+        return acc;
+      },
+      { sum: 0, count: 0 }
+    );
     const values = chartData.map(point => point.val);
-    const avg = Math.round(values.reduce((acc, value) => acc + value, 0) / values.length);
+    const avg = totals.count ? Math.round(totals.sum / totals.count) : 0;
     return {
       avg,
       max: Math.max(...values),
@@ -220,6 +288,15 @@ const DashboardPage: React.FC = () => {
       days: chartData.length
     };
   }, [chartData]);
+
+  const chartRangeLabel = useMemo(() => {
+    if (!chartData.length) return 'Sem dados no período selecionado';
+    const first = chartData[0]?.dateISO;
+    const last = chartData[chartData.length - 1]?.dateISO;
+    const selectedDays = periodOptions.find(p => p.value === period)?.days || 0;
+    if (!first || !last) return 'Sem dados no período selecionado';
+    return `Período carregado: ${formatDateBR(first)} até ${formatDateBR(last)} • ${chartData.length}/${selectedDays} dias com dados`;
+  }, [chartData, period, periodOptions]);
 
   if (loading) return (
     <div className="flex flex-col gap-8">
@@ -351,15 +428,16 @@ const DashboardPage: React.FC = () => {
 
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-56 md:h-40">
+        <div className="md:col-span-2 space-y-3">
+          <div className="relative overflow-hidden rounded-2xl h-64 md:h-44">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
               className={`absolute inset-0 transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
                 }`}
             >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full`}>
-                <div className="relative z-10 h-full flex flex-col pr-10">
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full relative`}>
+                <div className="relative z-10 h-full flex flex-col pr-8 pb-10 md:pb-8">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
                     {banner.badge && (
@@ -372,17 +450,18 @@ const DashboardPage: React.FC = () => {
                   <p className={`${banner.textColor} text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none`}>{banner.description}</p>
                   <button
                     onClick={() => window.location.hash = banner.buttonLink}
-                    className="mt-auto self-start px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
+                    className="mt-auto self-start px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
                   >
                     {banner.buttonText}
                   </button>
                 </div>
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
                 <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
               </div>
             </div>
           ))}
           {banners.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-2">
               {banners.map((_, index) => (
                 <button
                   key={index}
@@ -393,12 +472,57 @@ const DashboardPage: React.FC = () => {
               ))}
             </div>
           )}
+          </div>
+          <NavLink
+            to="/dicas-saude"
+            className="group block rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all overflow-hidden"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 shrink-0 rounded-lg bg-white/80 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 flex items-center justify-center text-blue-600 dark:text-blue-300 group-hover:scale-105 transition-transform">
+                <span className="material-symbols-outlined text-[18px]">health_and_safety</span>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">
+                  Dicas de saúde em destaque
+                </p>
+                <div className="relative overflow-hidden">
+                  <div className="health-marquee-track">
+                    {[0, 1].map((loopIndex) => (
+                      <span className="health-marquee-row" aria-hidden={loopIndex === 1 ? 'true' : undefined} key={`ticker-loop-${loopIndex}`}>
+                        {(healthTickerItems.length > 0 ? healthTickerItems : [{
+                          id: 'fallback',
+                          slug: 'fallback',
+                          title: 'Hidratação',
+                          summary: 'Beba mais água para ter uma vida saudável. Clique aqui e saiba mais.',
+                          content: '',
+                          category: 'hidratacao' as const,
+                          publishedAt: '2026-01-01'
+                        }]).map((tip) => (
+                          <span className="health-marquee-item" key={`${loopIndex}-${tip.id}`}>
+                            <span className={`health-marquee-chip ${getTipCategoryClasses(tip.category)}`}>
+                              {getTipCategoryLabel(tip.category)}
+                            </span>
+                            <span className="health-marquee-text">
+                              {tip.title}: {tip.summary}
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform shrink-0">arrow_forward</span>
+            </div>
+          </NavLink>
         </div>
         <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
           <div className="text-center">
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Propaganda</p>
-            <div className="w-full h-20 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-              <span className="text-slate-400 text-xs p-4">Anúncio 300x100</span>
+            <div className="w-[300px] max-w-full h-[200px] bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <span className="text-slate-400 text-xs p-4">Anúncio 300x200</span>
             </div>
           </div>
         </div>
@@ -444,7 +568,12 @@ const DashboardPage: React.FC = () => {
 
       <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
         <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência da Glicemia</h3>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência da Glicemia</h3>
+            <p className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              {chartRangeLabel}
+            </p>
+          </div>
 
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl">
             {periodOptions.map(option => (
@@ -468,8 +597,9 @@ const DashboardPage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="p-6 h-[340px] md:h-[360px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="p-6">
+          <div className="h-[250px] md:h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -495,11 +625,11 @@ const DashboardPage: React.FC = () => {
                 cursor={{ stroke: '#f97316', strokeOpacity: 0.25, strokeWidth: 1 }}
                 contentStyle={{
                   backgroundColor: 'rgba(255,255,255,0.98)',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   border: '1px solid #e2e8f0',
                   boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
-                  padding: '12px 16px',
-                  minWidth: '220px'
+                  padding: '8px 10px',
+                  minWidth: '180px'
                 }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
@@ -507,13 +637,13 @@ const DashboardPage: React.FC = () => {
                   const status = getGlycemiaStatus(point.val);
 
                   return (
-                    <div className="rounded-2xl border border-slate-200 bg-white/95 shadow-2xl p-3 min-w-[220px]">
+                    <div className="rounded-xl border border-slate-200 bg-white/95 shadow-2xl p-2 min-w-[180px]">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{point.name}</p>
-                      <div className="mt-2 flex items-baseline justify-between">
-                        <p className="text-xl font-black text-orange-600">{point.val} <span className="text-xs text-slate-500">mg/dL</span></p>
-                        <p className={`text-[11px] font-black ${status.color}`}>{status.label}</p>
+                      <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                        <p className="text-base font-black text-orange-600">{point.val} <span className="text-[10px] text-slate-500">mg/dL</span></p>
+                        <p className={`text-[10px] font-black ${status.color}`}>{status.label}</p>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
                         <p className="text-slate-600">Mín: <span className="font-black text-slate-900">{point.min}</span></p>
                         <p className="text-slate-600">Máx: <span className="font-black text-slate-900">{point.max}</span></p>
                         <p className="text-slate-600">Medições: <span className="font-black text-slate-900">{point.count}</span></p>
@@ -534,11 +664,12 @@ const DashboardPage: React.FC = () => {
                 activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }}
               />
             </AreaChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
           {chartInsights && (
-            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
               <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Média Período</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Média Ponderada</p>
                 <p className="text-sm font-black text-orange-600">{chartInsights.avg} mg/dL</p>
               </div>
               <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
@@ -689,6 +820,54 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <style>{`
+        .health-marquee-track {
+          display: flex;
+          width: max-content;
+          min-width: 100%;
+          animation: health-marquee 26s linear infinite;
+          will-change: transform;
+        }
+        .health-marquee-row {
+          display: inline-flex;
+          align-items: center;
+          gap: 1.25rem;
+          padding-right: 1.25rem;
+        }
+        .health-marquee-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          white-space: nowrap;
+        }
+        .health-marquee-chip {
+          font-size: 10px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          border-radius: 999px;
+          padding: 2px 8px;
+        }
+        .health-marquee-text {
+          display: inline-flex;
+          align-items: center;
+          white-space: nowrap;
+          font-size: 12px;
+          font-weight: 700;
+          color: #334155;
+        }
+        .dark .health-marquee-text {
+          color: #cbd5e1;
+        }
+        .group:hover .health-marquee-track {
+          animation-play-state: paused;
+        }
+        @keyframes health-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 };

@@ -13,6 +13,7 @@ const MedicationsPage = lazy(() => import('./pages/Medications'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const AlertsPage = lazy(() => import('./pages/Alerts'));
 const HelpPage = lazy(() => import('./pages/Help'));
+const HealthTipsPage = lazy(() => import('./pages/HealthTips'));
 const ProPage = lazy(() => import('./pages/Pro'));
 const UpdatesPage = lazy(() => import('./pages/Updates'));
 
@@ -338,6 +339,7 @@ const App: React.FC = () => {
                             <Route path="/alertas" element={<AlertsPage />} />
                             <Route path="/ajustes" element={<SettingsPage />} />
                             <Route path="/ajuda" element={<HelpPage />} />
+                            <Route path="/dicas-saude" element={<HealthTipsPage />} />
                             <Route path="/pro" element={<ProPage />} />
                             <Route path="/atualizacoes" element={<UpdatesPage />} />
                             <Route path="*" element={<Navigate to="/" />} />

@@ -8,9 +8,9 @@ const Footer: React.FC = () => {
   const version = 'v1.5.0';
 
   return (
-    <footer className="hidden md:block bg-white dark:bg-[#111121] border-t border-slate-200 dark:border-slate-800 mt-16">
-      <div className="max-w-7xl mx-auto px-10 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
+    <footer className="bg-white dark:bg-[#111121] border-t border-slate-200 dark:border-slate-800 mt-16">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Logo e Copyright */}
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -32,7 +32,7 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Links Úteis e Redes Sociais */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Links Coluna 1 */}
             <div>
               <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-3">

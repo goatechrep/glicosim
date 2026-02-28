@@ -2,9 +2,12 @@
 import { supabaseService } from './supabaseService';
 
 export interface DataSnapshot {
-  user: any[];
+  user: any | null;
   records: any[];
   alerts: any[];
+  payments: any[];
+  medications: any[];
+  reminders: any[];
   exportedAt: string;
   version: string;
 }
@@ -52,6 +55,28 @@ const getUnifiedStorage = () => {
   }
 
   return { records: [], alerts: [], payments: [] };
+};
+
+const getUnifiedUser = () => {
+  const localUser = readJSON('glicosim_user');
+  if (localUser && typeof localUser === 'object') return localUser;
+
+  const primary = readJSON(PRIMARY_STORAGE_KEY);
+  if (primary?.user && typeof primary.user === 'object') return primary.user;
+
+  const backup = readJSON(STORAGE_KEY);
+  if (backup?.user && typeof backup.user === 'object') return backup.user;
+
+  return null;
+};
+
+const getAuxiliaryLocalData = () => {
+  const medications = readJSON('glicosim_medications');
+  const reminders = readJSON('glicosim_reminders');
+  return {
+    medications: Array.isArray(medications) ? medications : [],
+    reminders: Array.isArray(reminders) ? reminders : []
+  };
 };
 
 export const dataSyncService = {
@@ -117,9 +142,12 @@ export const dataSyncService = {
     try {
 
       // Obter dados do localStorage ou Supabase
-      let userData: any [] = [];
+      let userData: any = null;
       let records: any[] = [];
       let alerts: any[] = [];
+      let payments: any[] = [];
+      let medications: any[] = [];
+      let reminders: any[] = [];
 
       if (isPro) {
         // Se é PRO, pega do Supabase
@@ -127,32 +155,48 @@ export const dataSyncService = {
           const user = await supabaseService.getUser(userId);
           const userRecords = await supabaseService.getRecords(userId);
           const userAlerts = await supabaseService.getAlerts(userId);
+          const localStorageData = getUnifiedStorage();
+          const auxData = getAuxiliaryLocalData();
 
-          userData = user[0];
+          userData = user;
           records = userRecords;
           alerts = userAlerts;
+          payments = localStorageData.payments || [];
+          medications = auxData.medications;
+          reminders = auxData.reminders;
         } catch (error) {
           console.warn('⚠️ Erro ao buscar dados do Supabase, usando localStorage:', error);
           // Fallback para localStorage
-          const backup = dataSyncService.getLocalBackup();
-          userData = backup?.user || [];
-          records = backup?.records || [];
-          alerts = backup?.alerts || [];
+          const localStorageData = getUnifiedStorage();
+          const auxData = getAuxiliaryLocalData();
+          userData = getUnifiedUser();
+          records = localStorageData.records || [];
+          alerts = localStorageData.alerts || [];
+          payments = localStorageData.payments || [];
+          medications = auxData.medications;
+          reminders = auxData.reminders;
         }
       } else {
         // Se não é PRO, pega do localStorage
-        const backup = dataSyncService.getLocalBackup();
-        userData = backup?.user || [];
-        records = backup?.records || [];
-        alerts = backup?.alerts || [];
+        const localStorageData = getUnifiedStorage();
+        const auxData = getAuxiliaryLocalData();
+        userData = getUnifiedUser();
+        records = localStorageData.records || [];
+        alerts = localStorageData.alerts || [];
+        payments = localStorageData.payments || [];
+        medications = auxData.medications;
+        reminders = auxData.reminders;
       }
 
       const snapshot: DataSnapshot = {
         user: userData,
         records,
         alerts,
+        payments,
+        medications,
+        reminders,
         exportedAt: new Date().toISOString(),
-        version: '1.0.0',
+        version: '1.1.0',
       };
 
       return snapshot;
@@ -214,8 +258,8 @@ export const dataSyncService = {
     try {
 
       // Sincronizar usuário
-      if (data.user) {
-        await supabaseService.updateUser(userId, data.user[0].id);
+      if (data.user && typeof data.user === 'object') {
+        await supabaseService.updateUser(userId, data.user);
       }
 
       // Sincronizar records
@@ -281,8 +325,26 @@ export const dataSyncService = {
   // ===== CALCULAR TAMANHO DOS DADOS =====
   getDataSize: (userId: string): string => {
     try {
-      const backup = dataSyncService.getLocalBackup(userId);
-      const sizeInBytes = new Blob([JSON.stringify(backup)]).size;
+      const keys = Object.keys(localStorage).filter((key) => {
+        if (!key.startsWith('glicosim_')) return false;
+        // Inclui dados globais do app e backups por usuário.
+        if (!userId) return true;
+        return (
+          key === 'glicosim_data' ||
+          key === 'glicosim_data_backup' ||
+          key === 'glicosim_user' ||
+          key === 'glicosim_medications' ||
+          key === 'glicosim_reminders' ||
+          key === 'glicosim_last_sync' ||
+          key.includes(userId)
+        );
+      });
+
+      const sizeInBytes = keys.reduce((total, key) => {
+        const value = localStorage.getItem(key) || '';
+        // Conta chave + valor armazenados.
+        return total + new Blob([key, value]).size;
+      }, 0);
       
       if (sizeInBytes < 1024) return `${sizeInBytes} B`;
       if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;

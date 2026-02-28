@@ -492,13 +492,13 @@ const SettingsPage: React.FC = () => {
                   <p className="text-[9px] text-slate-400">Padrão: 500 mg/dL</p>
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="grid grid-cols-2 gap-3 mt-6">
                 <button
                   onClick={() => {
                     settingsService.saveSettings(glucoseSettings);
                     alert('✅ Limites salvos com sucesso!');
                   }}
-                  className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
+                  className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
                 >
                   Salvar Limites
                 </button>
@@ -508,7 +508,7 @@ const SettingsPage: React.FC = () => {
                     setGlucoseSettings(settingsService.getSettings());
                     alert('✅ Limites restaurados para padrão!');
                   }}
-                  className="px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
+                  className="w-full px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
                 >
                   Restaurar Padrão
                 </button>
