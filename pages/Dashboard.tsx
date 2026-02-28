@@ -9,9 +9,32 @@ import { reminderService } from '../services/reminderService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
 import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
+import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { getAdSenseBlock } from '../data/adsense';
 import { getPlanById, getFormattedPrice } from '../data/plans';
 import { getBannersForPage } from '../data/banners';
+
+const getGlycemiaStatus = (value: number) => {
+  if (value > 180) return { label: 'Muito Alta', color: 'text-red-600 dark:text-red-400' };
+  if (value > 140) return { label: 'Alta', color: 'text-amber-600 dark:text-amber-400' };
+  if (value < 70) return { label: 'Baixa', color: 'text-blue-600 dark:text-blue-400' };
+  return { label: 'Normal', color: 'text-emerald-600 dark:text-emerald-400' };
+};
+
+const parseISODate = (iso: string): Date | null => {
+  if (!iso || typeof iso !== 'string') return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const formatDateBR = (iso: string) => {
+  const date = parseISODate(iso);
+  if (!date) return iso;
+  return date.toLocaleDateString('pt-BR');
+};
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -35,10 +58,10 @@ const DashboardPage: React.FC = () => {
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     const savedSync = localStorage.getItem('glicosim_last_sync');
     if (savedSync) setLastSync(savedSync);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -81,12 +104,12 @@ const DashboardPage: React.FC = () => {
     setRecords(r);
     setLowStockMeds(lowStock);
     setDueReminders(reminders);
-    
+
     if (reminders.length > 0 && !reminderModalOpen) {
       setCurrentReminder(reminders[0]);
       setReminderModalOpen(true);
     }
-    
+
     setLoading(false);
   }, [reminderModalOpen]);
 
@@ -124,14 +147,79 @@ const DashboardPage: React.FC = () => {
 
   const chartData = useMemo(() => {
     const days = periodOptions.find(p => p.value === period)?.days || 7;
-    return [...records]
-      .reverse()
-      .slice(-days)
-      .map(r => ({
-        name: r.data.split('-')[2],
-        val: r.antesRefeicao,
-      }));
+    const endDate = new Date();
+    endDate.setHours(0, 0, 0, 0);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - (days - 1));
+
+    const grouped = new Map<string, number[]>();
+    records.forEach((record) => {
+      if (!record?.data || typeof record.antesRefeicao !== 'number') return;
+      const recordDate = parseISODate(record.data);
+      if (!recordDate) return;
+      if (recordDate < startDate || recordDate > endDate) return;
+      if (!grouped.has(record.data)) grouped.set(record.data, []);
+      grouped.get(record.data)!.push(record.antesRefeicao);
+    });
+
+    let sortedDates = Array.from(grouped.keys()).sort((a, b) => {
+      const da = parseISODate(a)?.getTime() || 0;
+      const db = parseISODate(b)?.getTime() || 0;
+      return da - db;
+    });
+    if (sortedDates.length === 0) {
+      // fallback quando nao ha dados no intervalo atual: usa os ultimos dias com registro
+      records.forEach((record) => {
+        if (!record?.data || typeof record.antesRefeicao !== 'number') return;
+        if (!grouped.has(record.data)) grouped.set(record.data, []);
+        grouped.get(record.data)!.push(record.antesRefeicao);
+      });
+      sortedDates = Array.from(grouped.keys()).sort((a, b) => {
+        const da = parseISODate(a)?.getTime() || 0;
+        const db = parseISODate(b)?.getTime() || 0;
+        return da - db;
+      }).slice(-days);
+    }
+
+    const tempRows = sortedDates.map((dateISO) => {
+      const values = grouped.get(dateISO) || [];
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const avgRaw = values.reduce((acc, value) => acc + value, 0) / values.length;
+      const avg = Math.round(avgRaw);
+
+      return {
+        dateISO,
+        name: formatDateBR(dateISO),
+        val: avg,
+        min,
+        max,
+        count: values.length
+      };
+    });
+
+    const periodAvg = tempRows.length
+      ? Math.round(tempRows.reduce((acc, row) => acc + row.val, 0) / tempRows.length)
+      : 0;
+
+    return tempRows.map(row => ({
+      ...row,
+      periodAvg,
+      deltaPeriod: row.val - periodAvg
+    }));
   }, [records, period, periodOptions]);
+
+  const chartInsights = useMemo(() => {
+    if (!chartData.length) return null;
+    const values = chartData.map(point => point.val);
+    const avg = Math.round(values.reduce((acc, value) => acc + value, 0) / values.length);
+    return {
+      avg,
+      max: Math.max(...values),
+      min: Math.min(...values),
+      days: chartData.length
+    };
+  }, [chartData]);
 
   if (loading) return (
     <div className="flex flex-col gap-8">
@@ -154,7 +242,10 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
+      {/** Avisos para instalar App*/}
+      <PWAInstallPrompt mode="banner" />
       <div className="flex items-center justify-between">
+        {/* Boas vindas ao usuário */}
         <div className="flex items-center gap-4 animate-slide-up-subtle">
           {user?.foto && (
             <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-orange-200 dark:border-orange-900/30">
@@ -260,16 +351,15 @@ const DashboardPage: React.FC = () => {
 
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-48 md:h-40">
+        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-56 md:h-40">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-all duration-500 ${
-                index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
-              }`}
+              className={`absolute inset-0 transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+                }`}
             >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-6 text-white h-full`}>
-                <div className="relative z-10">
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full`}>
+                <div className="relative z-10 h-full flex flex-col pr-10">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
                     {banner.badge && (
@@ -278,11 +368,11 @@ const DashboardPage: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-black uppercase mb-2">{banner.title}</h3>
-                  <p className={`${banner.textColor} text-sm mb-4`}>{banner.description}</p>
+                  <h3 className="text-lg md:text-xl font-black uppercase mb-1">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none`}>{banner.description}</p>
                   <button
                     onClick={() => window.location.hash = banner.buttonLink}
-                    className="px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
+                    className="mt-auto self-start px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
                   >
                     {banner.buttonText}
                   </button>
@@ -297,9 +387,8 @@ const DashboardPage: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => setCurrentBannerIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
-                  }`}
+                  className={`w-2 h-2 rounded-full transition-all ${index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
+                    }`}
                 />
               ))}
             </div>
@@ -309,7 +398,7 @@ const DashboardPage: React.FC = () => {
           <div className="text-center">
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Propaganda</p>
             <div className="w-full h-20 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-              <span className="text-slate-400 text-xs">Anúncio 300x100</span>
+              <span className="text-slate-400 text-xs p-4">Anúncio 300x100</span>
             </div>
           </div>
         </div>
@@ -325,31 +414,31 @@ const DashboardPage: React.FC = () => {
       {user?.plano !== 'PRO' && (() => {
         const proPlan = getPlanById('PRO');
         return (
-        <>
-          {/* Mobile: Banner Upgrade PRO */}
-          <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
-            <div className="relative z-10 text-center">
-              <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
-              <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
-              <div className="flex items-baseline justify-center gap-2 mb-4">
-                <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
-                <span className="text-orange-200">/{proPlan?.periodo}</span>
+          <>
+            {/* Mobile: Banner Upgrade PRO */}
+            <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
+              <div className="relative z-10 text-center">
+                <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
+                <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
+                <div className="flex items-baseline justify-center gap-2 mb-4">
+                  <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
+                  <span className="text-orange-200">/{proPlan?.periodo}</span>
+                </div>
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
+                  <span>Conhecer Plano {proPlan?.nome}</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </div>
               </div>
-              <div className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
-                <span>Conhecer Plano {proPlan?.nome}</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+            </div>
+            {/* Desktop: AdSense */}
+            <div className="hidden md:block bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
+              <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-before-chart')?.format}</span>
               </div>
             </div>
-            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-          </div>
-          {/* Desktop: AdSense */}
-          <div className="hidden md:block bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
-            <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-              <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-before-chart')?.format}</span>
-            </div>
-          </div>
-        </>
+          </>
         );
       })()}
 
@@ -403,25 +492,35 @@ const DashboardPage: React.FC = () => {
                 domain={[0, 300]}
               />
               <Tooltip
+                cursor={{ stroke: '#f97316', strokeOpacity: 0.25, strokeWidth: 1 }}
                 contentStyle={{
                   backgroundColor: 'rgba(255,255,255,0.98)',
                   borderRadius: '16px',
                   border: '1px solid #e2e8f0',
                   boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
-                  padding: '12px 16px'
+                  padding: '12px 16px',
+                  minWidth: '220px'
                 }}
-                itemStyle={{ fontSize: '14px', fontWeight: '700', color: '#f97316' }}
-                labelStyle={{
-                  fontSize: '10px',
-                  color: '#64748b',
-                  textTransform: 'uppercase',
-                  marginBottom: '6px',
-                  fontWeight: '800',
-                  letterSpacing: '0.1em'
-                }}
-                formatter={(value: number) => {
-                  const status = value > 180 ? '⚠️ Muito Alta' : value > 140 ? '⚡ Alta' : value < 70 ? '❄️ Baixa' : '✅ Normal';
-                  return [`${value} mg/dL`, status];
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const point = payload[0]?.payload as any;
+                  const status = getGlycemiaStatus(point.val);
+
+                  return (
+                    <div className="rounded-2xl border border-slate-200 bg-white/95 shadow-2xl p-3 min-w-[220px]">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{point.name}</p>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <p className="text-xl font-black text-orange-600">{point.val} <span className="text-xs text-slate-500">mg/dL</span></p>
+                        <p className={`text-[11px] font-black ${status.color}`}>{status.label}</p>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                        <p className="text-slate-600">Mín: <span className="font-black text-slate-900">{point.min}</span></p>
+                        <p className="text-slate-600">Máx: <span className="font-black text-slate-900">{point.max}</span></p>
+                        <p className="text-slate-600">Medições: <span className="font-black text-slate-900">{point.count}</span></p>
+                        <p className="text-slate-600">Vs média período: <span className={`font-black ${point.deltaPeriod > 0 ? 'text-red-600' : point.deltaPeriod < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>{point.deltaPeriod > 0 ? `+${point.deltaPeriod}` : point.deltaPeriod} mg/dL</span></p>
+                      </div>
+                    </div>
+                  );
                 }}
               />
               <Area
@@ -436,6 +535,26 @@ const DashboardPage: React.FC = () => {
               />
             </AreaChart>
           </ResponsiveContainer>
+          {chartInsights && (
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Média Período</p>
+                <p className="text-sm font-black text-orange-600">{chartInsights.avg} mg/dL</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Maior Média Dia</p>
+                <p className="text-sm font-black text-red-600">{chartInsights.max} mg/dL</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Menor Média Dia</p>
+                <p className="text-sm font-black text-emerald-600">{chartInsights.min} mg/dL</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dias no Gráfico</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{chartInsights.days}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -545,19 +664,19 @@ const DashboardPage: React.FC = () => {
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
                 <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  max="500" 
-                  value={aposRefeicaoValue || ''} 
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  value={aposRefeicaoValue || ''}
                   onChange={e => {
                     const val = Number(e.target.value);
                     setAposRefeicaoValue(val);
                     if (val >= 400) {
                       alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
                     }
-                  }} 
-                  className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600" 
+                  }}
+                  className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
                   placeholder="0"
                   autoFocus
                 />

@@ -120,7 +120,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
                 medication
               </span>
               <div>
-                <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
                   Medicamento
                 </p>
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -132,7 +132,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onEdit, onDelete }) => 
           
           {record.dose !== '0' && (
             <div className="ml-auto text-right">
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold">
                 Dose
               </p>
               <p className="text-xs font-black text-slate-700 dark:text-slate-300">

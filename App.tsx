@@ -19,7 +19,6 @@ const UpdatesPage = lazy(() => import('./pages/Updates'));
 // Components
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Loading fallback
 const PageLoader: React.FC = () => (
@@ -65,14 +64,12 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // Verificar sessão inicial
     const checkSession = async () => {
       try {
-        console.log('🔍 Verificando sessão inicial...');
-        
+
         // Primeiro tentar carregar do localStorage (offline-first)
         const localUser = localStorage.getItem('glicosim_user');
         if (localUser) {
           try {
             const userData = JSON.parse(localUser);
-            console.log('✅ Usuário carregado do localStorage');
             if (mounted) {
               setUser(userData);
               setLoading(false);
@@ -82,28 +79,24 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             localStorage.removeItem('glicosim_user');
           }
         }
-        
+
         // Se não tiver no localStorage, tentar do Supabase
         const { data: { session } } = await supabaseClient!.auth.getSession();
-        
+
         if (!mounted) return;
-        
+
         if (session?.user) {
-          console.log('✅ Sessão encontrada:', session.user.id);
           const userProfile = await supabaseService.getUser(session.user.id);
           if (userProfile && mounted) {
-            console.log('✅ Perfil carregado do Supabase');
             localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
             setUser(userProfile);
           }
         } else {
-          console.log('❌ Nenhuma sessão encontrada');
         }
       } catch (error) {
         console.error('❌ Erro ao verificar sessão:', error);
       } finally {
         if (mounted) {
-          console.log('✅ Loading finalizado');
           setLoading(false);
         }
       }
@@ -114,13 +107,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // Monitorar mudanças de estado de autenticação do Supabase
     const { data: { subscription } } = supabaseClient!.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth state changed:', event, 'Session:', !!session);
-        
+
         if (!mounted) return;
-        
+
         if (session?.user) {
           // Usuário autenticado - buscar perfil
-          console.log('👤 Buscando perfil do usuário:', session.user.id);
           try {
             const userProfile = await supabaseService.getUser(session.user.id);
             if (!userProfile) {
@@ -130,7 +121,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               setUser(null);
               setSessionExpired(true);
             } else {
-              console.log('✅ Perfil encontrado:', userProfile.nome, 'Onboarded:', userProfile.isOnboarded);
               localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
               setUser(userProfile);
               setSessionExpired(false);
@@ -142,7 +132,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           }
         } else {
           // Sem sessão
-          console.log('🚫 Sem sessão ativa');
           setUser(null);
           setSessionExpired(event === 'SIGNED_OUT');
         }
@@ -242,35 +231,31 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  
-  console.log('🔒 PrivateRoute:', { user: !!user, loading, isOnboarded: user?.isOnboarded });
-  
+
+
   if (loading) {
-    console.log('⏳ PrivateRoute: Carregando...');
     return (
       <div className="h-screen flex items-center justify-center bg-white dark:bg-[#111121]">
         <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
-  
+
   if (!user) {
-    console.log('❌ PrivateRoute: Sem usuário, redirecionando para login');
     return <Navigate to="/login" replace />;
   }
-  
+
   if (!user.isOnboarded) {
-    console.log('⚠️ PrivateRoute: Usuário não onboarded, redirecionando para onboarding');
     return <Navigate to="/onboarding" replace />;
   }
-  
-  console.log('✅ PrivateRoute: Acesso permitido');
+
   return <>{children}</>;
 };
 
 const App: React.FC = () => {
   const [isOffline, setIsOffline] = useState(!window.navigator.onLine);
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+  const hasNetworkBanner = isOffline || (showSyncSuccess && !isOffline);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -293,9 +278,9 @@ const App: React.FC = () => {
     <AuthProvider>
       <HashRouter>
         <div className="min-h-screen bg-white dark:bg-[#111121] text-slate-950 dark:text-slate-50 overflow-hidden flex flex-col">
-          
+
           {isOffline && (
-            <div className="bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[100] border-b border-orange-500/30">
+            <div className="fixed top-0 left-0 right-0 w-full bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[1200] border-b border-orange-500/30">
               <span className="material-symbols-outlined text-orange-500 animate-pulse text-[20px]">cloud_off</span>
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
                 Você está offline. <span className="text-orange-400">Os dados serão sincronizados</span> ao retornar.
@@ -304,7 +289,7 @@ const App: React.FC = () => {
           )}
 
           {showSyncSuccess && !isOffline && (
-            <div className="bg-emerald-600 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[100]">
+            <div className="fixed top-0 left-0 right-0 w-full bg-emerald-600 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[1200]">
               <span className="material-symbols-outlined text-[20px]">sync</span>
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
                 Conexão restabelecida. <span className="opacity-80">Sincronizando dados agora...</span>
@@ -334,7 +319,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="flex-1 flex flex-col min-w-0">
-                      <div className="md:hidden flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-white/80 dark:bg-[#111121]/80 backdrop-blur-xl z-50">
+                      <div className={`md:hidden fixed left-0 right-0 ${hasNetworkBanner ? 'top-10' : 'top-0'} flex items-center justify-between px-6 py-5 border-b border-white/40 dark:border-white/10 bg-white/35 dark:bg-slate-900/35 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] shadow-[0_8px_30px_rgba(15,23,42,0.10)] z-[1100]`}>
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3" aria-hidden="true">
                             <span className="material-symbols-outlined text-white text-[20px] font-bold">bloodtype</span>
@@ -344,7 +329,7 @@ const App: React.FC = () => {
                         <LogoutButton />
                       </div>
 
-                      <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-12 custom-scrollbar relative">
+                      <main className={`flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-8 md:px-10 md:py-12 custom-scrollbar relative`}>
                         <LazyPage>
                           <Routes>
                             <Route path="/" element={<DashboardPage />} />
@@ -362,9 +347,9 @@ const App: React.FC = () => {
                       </main>
 
                       {/* Fixed Mobile Bottom Navigation */}
-                      <nav 
-                        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] border-t border-slate-100 dark:border-slate-800/60 z-[1000] flex items-center justify-between px-4"
-                        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                      <nav
+                        className="md:hidden fixed bottom-3 left-3 right-3 bg-white/35 dark:bg-slate-900/35 supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] rounded-lg shadow-[0_10px_30px_rgba(15,23,42,0.18)] z-[1000] flex items-center justify-between px-3 pt-2"
+                        style={{ paddingBottom: 'max(0.65rem, env(safe-area-inset-bottom))' }}
                         aria-label="Menu de navegação principal"
                       >
                         <div className="flex w-[40%] justify-around">
@@ -374,7 +359,7 @@ const App: React.FC = () => {
 
                         {/* Center Floating Action Button (FAB) */}
                         <div className="relative w-[20%] flex justify-center">
-                          <Link 
+                          <Link
                             to="/registros?new=true"
                             className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                             aria-label="Adicionar novo registro"
@@ -389,14 +374,13 @@ const App: React.FC = () => {
                         </div>
                       </nav>
                       {/* Safe Area Spacer for Mobile Menu */}
-                      <div className="md:hidden w-full shrink-0" style={{ height: 'calc(5rem + env(safe-area-inset-bottom))' }}></div>
+                      <div className="md:hidden w-full shrink-0" style={{ height: 'calc(6.5rem + env(safe-area-inset-bottom))' }}></div>
                     </div>
                   </div>
                 </PrivateRoute>
               } />
             </Routes>
           </div>
-          <PWAInstallPrompt />
         </div>
       </HashRouter>
       <style>{`
@@ -415,9 +399,9 @@ const App: React.FC = () => {
 };
 
 const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: string }) => (
-  <NavLink 
-    to={to} 
-    className={({ isActive }) => 
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
       `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600' : 'text-slate-500 dark:text-slate-300'}`
     }
     aria-label={label}
@@ -436,7 +420,7 @@ const LogoutButton: React.FC = () => {
           logout();
         }
       }}
-      className="min-w-[44px] min-h-[44px] rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center border border-red-200 dark:border-red-800 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      className="min-w-[44px] min-h-[44px] rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center border border-red-200 dark:border-red-800 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
       aria-label="Sair do sistema"
     >
       <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[20px]">logout</span>

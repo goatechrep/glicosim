@@ -688,20 +688,20 @@ const RecordsPage: React.FC = () => {
             <button 
               onClick={handleInsertTestRecords}
               disabled={isInsertingTestRecords || isClearingRecords}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95"
+              className="flex-1 flex items-center justify-center px-3 py-2.5 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95"
               title="Inserir dados de teste"
+              aria-label={isInsertingTestRecords ? 'Inserindo dados de teste' : 'Inserir dados de teste'}
             >
-              <span className="material-symbols-outlined text-[16px]">science</span>
-              <span>{isInsertingTestRecords ? 'Inserindo...' : 'Teste'}</span>
+              <span className={`material-symbols-outlined text-[16px] ${isInsertingTestRecords ? 'animate-spin' : ''}`}>rocket_launch</span>
             </button>
             <button 
               onClick={handleClearAllRecords}
               disabled={isClearingRecords || isInsertingTestRecords}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+              className="flex-1 flex items-center justify-center px-3 py-2.5 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
               title="Limpar banco de registros"
+              aria-label={isClearingRecords ? 'Limpando banco de registros' : 'Limpar banco de registros'}
             >
-              <span className="material-symbols-outlined text-[16px]">delete_forever</span>
-              <span>{isClearingRecords ? 'Limpando...' : 'Limpar'}</span>
+              <span className={`material-symbols-outlined text-[16px] ${isClearingRecords ? 'animate-pulse' : ''}`}>delete</span>
             </button>
             <button 
               onClick={exportToJSON}
@@ -725,54 +725,22 @@ const RecordsPage: React.FC = () => {
             <button 
               onClick={handleInsertTestRecords}
               disabled={isInsertingTestRecords || isClearingRecords}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+              className="flex items-center justify-center px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
               title="Inserir dados de teste"
+              aria-label={isInsertingTestRecords ? 'Inserindo dados de teste' : 'Inserir dados de teste'}
             >
-              <span className="material-symbols-outlined text-[14px]">science</span>
-              <span className="hidden md:inline">{isInsertingTestRecords ? 'Inserindo...' : 'Teste'}</span>
+              <span className={`material-symbols-outlined text-[16px] ${isInsertingTestRecords ? 'animate-spin' : ''}`}>rocket_launch</span>
             </button>
             <button 
               onClick={handleClearAllRecords}
               disabled={isClearingRecords || isInsertingTestRecords}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+              className="flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
               title="Limpar banco de registros"
+              aria-label={isClearingRecords ? 'Limpando banco de registros' : 'Limpar banco de registros'}
             >
-              <span className="material-symbols-outlined text-[14px]">delete_forever</span>
-              <span className="hidden md:inline">{isClearingRecords ? 'Limpando...' : 'Limpar Banco'}</span>
-            </button>
-            <button 
-              onClick={exportToCSV}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
-              title="Exportar como CSV"
-            >
-              <span className="material-symbols-outlined text-[14px]">table_view</span>
-              <span className="hidden md:inline">CSV</span>
-            </button>
-            <button 
-              onClick={exportToJSON}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
-              title="Exportar como JSON"
-            >
-              <span className="material-symbols-outlined text-[14px]">data_object</span>
-              <span className="hidden md:inline">JSON</span>
-            </button>
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
-              title="Exportar para Excel"
-            >
-              <span className="material-symbols-outlined text-[14px]">table_chart</span>
-              <span className="hidden md:inline">XLS</span>
+              <span className={`material-symbols-outlined text-[16px] ${isClearingRecords ? 'animate-pulse' : ''}`}>delete</span>
             </button>
           </div>
-          <button 
-            onClick={exportToPDF}
-            className="hidden sm:flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 bg-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
-            title="Gerar PDF"
-          >
-            <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-            <span className="hidden md:inline">PDF</span>
-          </button>
         </div>
       </header>
 
@@ -807,21 +775,40 @@ const RecordsPage: React.FC = () => {
               <span className="hidden lg:inline">Deletar {selectedRecords.size}</span>
             </button>
           )}
-          {records.length > 0 && (
-            <button
-              onClick={() => {
-                if (confirm('⚠️ Tem certeza que deseja LIMPAR TODOS os ' + records.length + ' registros? Esta ação não pode ser desfeita!')) {
-                  handleClearAllRecords();
-                }
-              }}
-              disabled={isClearingRecords || isInsertingTestRecords}
-              className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all active:scale-95 ml-auto"
-              title="Limpar todos os registros"
+          <div className="ml-auto flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            <button 
+              onClick={exportToCSV}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+              title="Exportar como CSV"
             >
-              <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-              <span className="hidden lg:inline">{isClearingRecords ? 'Limpando...' : 'Limpar Tudo'}</span>
+              <span className="material-symbols-outlined text-[14px]">table_view</span>
+              <span className="hidden lg:inline">CSV</span>
             </button>
-          )}
+            <button 
+              onClick={exportToJSON}
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+              title="Exportar como JSON"
+            >
+              <span className="material-symbols-outlined text-[14px]">data_object</span>
+              <span className="hidden lg:inline">JSON</span>
+            </button>
+            <button 
+              onClick={exportToExcel}
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+              title="Exportar para Excel"
+            >
+              <span className="material-symbols-outlined text-[14px]">table_chart</span>
+              <span className="hidden lg:inline">XLS</span>
+            </button>
+            <button 
+              onClick={exportToPDF}
+              className="flex items-center gap-1.5 px-3 py-2 bg-orange-600 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95"
+              title="Gerar PDF"
+            >
+              <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+              <span className="hidden lg:inline">PDF</span>
+            </button>
+          </div>
         </div>
         
         {showAdvancedSearch && (
@@ -1145,7 +1132,7 @@ const RecordsPage: React.FC = () => {
                 <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Criar alerta para este registro</label>
               </div>
 
-              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white dark:bg-[#111121] pb-4">
+              <div className="flex gap-3 pt-2 sticky bottom-0 bg-white dark:bg-[#111121] pb-0">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
                 <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar Registro</button>
               </div>

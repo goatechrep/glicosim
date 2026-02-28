@@ -54,7 +54,6 @@ const OnboardingPage: React.FC = () => {
     try {
 
       const userPlan = user.isPro ? 'PRO' : 'FREE';
-      console.log(`Finalizando onboarding para usuário ${user.id} com plano ${userPlan} e glicemia inicial de ${glicemy} mg/dL...`);
 
       const recordData = {
         id: Date.now().toString(),
@@ -69,10 +68,8 @@ const OnboardingPage: React.FC = () => {
         timestamp: Date.now()
       };
 
-      console.log('💾 Salvando registro:', recordData);
       await dataSyncService.saveRecord(recordData);
       
-      console.log('💾 Verificando localStorage:', localStorage.getItem('glicosim_data_backup'));
 
       const localData = {
         user: [user],

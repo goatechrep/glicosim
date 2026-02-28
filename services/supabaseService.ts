@@ -52,14 +52,12 @@ export const supabaseService = {
 
     if (error) throw error;
     
-    console.log('✅ Usuário criado:', data.user?.id);
     return data;
   },
 
   signIn: async (email: string, password: string) => {
     if (!supabaseClient) throw new Error('Supabase not configured');
     
-    console.log('🔐 Tentando fazer login...');
     
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email,
@@ -71,13 +69,11 @@ export const supabaseService = {
       throw error;
     }
 
-    console.log('✅ Login bem-sucedido, usuário:', data.user?.id);
 
     // Atualizar último login
     if (data.user) {
       const userProfile = await supabaseService.getUser(data.user.id);
       
-      console.log('👤 Perfil encontrado:', !!userProfile);
 
       if (!userProfile) {
         console.error('❌ Perfil não encontrado no banco');
@@ -91,7 +87,6 @@ export const supabaseService = {
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
         
-      console.log('✅ Último login atualizado');
     }
     return data;
   },
@@ -216,7 +211,6 @@ export const supabaseService = {
     if (!supabaseClient) throw new Error('Supabase not configured');
 
     try {
-      console.log('Starting upload for user:', userId, 'File:', file.name, file.type);
       
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const timestamp = Date.now();
@@ -227,7 +221,6 @@ export const supabaseService = {
       let uploadData = null;
       
       for (let attempt = 1; attempt <= 2; attempt++) {
-        console.log(`Upload attempt ${attempt}...`);
         
         const result = await supabaseClient.storage
           .from('profile-images')
@@ -240,7 +233,6 @@ export const supabaseService = {
         uploadData = result.data;
 
         if (!uploadError) {
-          console.log('Upload successful on attempt', attempt);
           break;
         }
         
@@ -272,7 +264,6 @@ export const supabaseService = {
         throw new Error('Nenhum dado retornado do upload');
       }
 
-      console.log('Getting public URL for file:', fileName);
 
       // Obter URL pública
       const { data: urlData } = supabaseClient.storage
@@ -283,7 +274,6 @@ export const supabaseService = {
         throw new Error('Não foi possível obter URL da imagem');
       }
 
-      console.log('Public URL obtained:', urlData.publicUrl);
 
       // Atualizar banco de dados
       const { error: updateError } = await supabaseClient
@@ -296,7 +286,6 @@ export const supabaseService = {
         throw new Error(`Erro ao salvar URL: ${updateError.message}`);
       }
 
-      console.log('Upload completed successfully');
       return urlData.publicUrl;
     } catch (error) {
       console.error('Upload profile image error:', error);

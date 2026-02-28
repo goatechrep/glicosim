@@ -11,17 +11,58 @@ export interface DataSnapshot {
 
 const STORAGE_KEY = 'glicosim_data_backup';
 const LAST_SYNC_KEY = 'glicosim_last_sync';
+const PRIMARY_STORAGE_KEY = 'glicosim_data';
+
+const readJSON = (key: string): any | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeRecord = (record: any): any => {
+  if (!record) return null;
+  const timestamp =
+    typeof record.timestamp === 'number'
+      ? record.timestamp
+      : new Date(`${record.data || new Date().toISOString().split('T')[0]}T00:00:00`).getTime();
+
+  return { ...record, timestamp };
+};
+
+const getUnifiedStorage = () => {
+  // Fonte principal do app (usada por mockService e telas de CRUD)
+  const primary = readJSON(PRIMARY_STORAGE_KEY);
+  if (primary && Array.isArray(primary.records)) {
+    const records = primary.records.map(normalizeRecord).filter(Boolean);
+    const alerts = Array.isArray(primary.alerts) ? primary.alerts : [];
+    const payments = Array.isArray(primary.payments) ? primary.payments : [];
+    return { records, alerts, payments };
+  }
+
+  // Fallback legado
+  const backup = readJSON(STORAGE_KEY);
+  if (backup && Array.isArray(backup.records)) {
+    const records = backup.records.map(normalizeRecord).filter(Boolean);
+    const alerts = Array.isArray(backup.alerts) ? backup.alerts : [];
+    const payments = Array.isArray(backup.payments) ? backup.payments : [];
+    return { records, alerts, payments };
+  }
+
+  return { records: [], alerts: [], payments: [] };
+};
 
 export const dataSyncService = {
   // ===== Dashboard Stats =====
   getDashboardStats: async (): Promise<any> => {
     try {
-      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[], "alerts":[]}');
-      const records = storage.records || [];
-      const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+      const storage = getUnifiedStorage();
+      const records = [...storage.records].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      const lastRecord = records.length > 0 ? records[0] : null;
       const avg = records.length > 0 ? records.reduce((sum: number, r: any) => sum + (r.antesRefeicao || 0), 0) / records.length : 0;
       
-      console.log('📊 Stats:', { records: records.length, avg });
       
       return {
         lastGlicemy: lastRecord?.antesRefeicao || 0,
@@ -46,8 +87,8 @@ export const dataSyncService = {
   // ===== Registros de glicemia =====
   getRecords: async (): Promise<any[]> => {
     try {
-      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[]}');
-      return storage.records || [];
+      const storage = getUnifiedStorage();
+      return [...storage.records].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     } catch (error) {
       console.error('❌ Erro ao obter registros:', error);
       return [];
@@ -56,10 +97,17 @@ export const dataSyncService = {
 
   saveRecord: async (record: any): Promise<void> => {
     try {
-      const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"records":[]}');
-      storage.records = storage.records || [];
-      storage.records.push(record);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
+      // Salva na base principal usada pelo app
+      const primary = readJSON(PRIMARY_STORAGE_KEY) || { user: null, records: [], payments: [], alerts: [] };
+      primary.records = Array.isArray(primary.records) ? primary.records : [];
+      primary.records.push(normalizeRecord(record));
+      localStorage.setItem(PRIMARY_STORAGE_KEY, JSON.stringify(primary));
+
+      // Mantém compatibilidade com backup legado
+      const backup = readJSON(STORAGE_KEY) || { records: [], alerts: [], payments: [] };
+      backup.records = Array.isArray(backup.records) ? backup.records : [];
+      backup.records.push(normalizeRecord(record));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(backup));
     } catch (error) {
       console.error('❌ Erro ao salvar registro:', error);
     }
@@ -67,7 +115,6 @@ export const dataSyncService = {
   // ===== EXPORTAR DADOS =====
   exportUserData: async (userId: string, isPro: boolean = false): Promise<DataSnapshot> => {
     try {
-      console.log('📦 Exportando dados do usuário...');
 
       // Obter dados do localStorage ou Supabase
       let userData: any [] = [];
@@ -108,7 +155,6 @@ export const dataSyncService = {
         version: '1.0.0',
       };
 
-      console.log('✅ Dados exportados:', snapshot);
       return snapshot;
     } catch (error) {
       console.error('❌ Erro ao exportar dados:', error);
@@ -133,7 +179,6 @@ export const dataSyncService = {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log('✅ Arquivo baixado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao baixar arquivo:', error);
       throw error;
@@ -146,7 +191,6 @@ export const dataSyncService = {
       const key = `${STORAGE_KEY}_${userId}`;
       localStorage.setItem(key, JSON.stringify(data));
       localStorage.setItem(`${LAST_SYNC_KEY}_${userId}`, new Date().toISOString());
-      console.log('✅ Dados salvos no localStorage');
     } catch (error) {
       console.error('❌ Erro ao salvar no localStorage:', error);
       throw error;
@@ -168,7 +212,6 @@ export const dataSyncService = {
   // ===== SINCRONIZAR COM SUPABASE (PRO) =====
   syncToSupabase: async (userId: string, data: DataSnapshot): Promise<void> => {
     try {
-      console.log('🔄 Sincronizando com Supabase...');
 
       // Sincronizar usuário
       if (data.user) {
@@ -192,7 +235,6 @@ export const dataSyncService = {
       }
 
       localStorage.setItem(`${LAST_SYNC_KEY}_${userId}`, new Date().toISOString());
-      console.log('✅ Sincronização concluída');
     } catch (error) {
       console.error('❌ Erro ao sincronizar:', error);
       throw error;
@@ -202,7 +244,6 @@ export const dataSyncService = {
   // ===== DELETAR TODOS OS DADOS =====
   deleteAllData: async (userId: string, isPro: boolean = false): Promise<void> => {
     try {
-      console.log('🗑️ Deletando todos os dados...');
 
       if (isPro) {
         // Deletar do Supabase
@@ -217,7 +258,6 @@ export const dataSyncService = {
             await supabaseService.deleteAlert(alert.id);
           }
 
-          console.log('✅ Dados deletados do Supabase');
         } catch (error) {
           console.warn('⚠️ Erro ao deletar do Supabase:', error);
         }
@@ -227,7 +267,6 @@ export const dataSyncService = {
       const keys = Object.keys(localStorage).filter(k => k.includes(userId));
       keys.forEach(key => localStorage.removeItem(key));
 
-      console.log('✅ Todos os dados foram deletados');
     } catch (error) {
       console.error('❌ Erro ao deletar dados:', error);
       throw error;
