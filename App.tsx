@@ -95,7 +95,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         } else {
         }
       } catch (error) {
-        console.error('❌ Erro ao verificar sessão:', error);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -117,7 +116,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             const userProfile = await supabaseService.getUser(session.user.id);
             if (!userProfile) {
               // Perfil não existe no banco - deslogar
-              console.warn('❌ Perfil do usuário não encontrado. Deslogando...');
               await supabaseService.signOut();
               setUser(null);
               setSessionExpired(true);
@@ -127,7 +125,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               setSessionExpired(false);
             }
           } catch (error) {
-            console.error('❌ Erro ao buscar perfil:', error);
             setUser(null);
             setSessionExpired(true);
           }

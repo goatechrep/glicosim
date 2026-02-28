@@ -27,14 +27,10 @@ const LoginPage: React.FC = () => {
 
   // Redirecionar quando o usuário mudar
   useEffect(() => {
-    console.log('🔄 Login - Estatus mudou:', { user: !!user, loading, isOnboarded: user?.isOnboarded });
     if (!loading && user) {
-      console.log('🔀 Redirecionando usuário...', { isOnboarded: user.isOnboarded });
       if (!user.isOnboarded) {
-        console.log('➡️ Indo para onboarding');
         navigate('/onboarding', { replace: true });
       } else {
-        console.log('➡️ Indo para dashboard');
         navigate('/', { replace: true });
       }
     }
