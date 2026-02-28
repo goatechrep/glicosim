@@ -196,7 +196,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       {/* Alerta de sessão expirada */}
       {sessionExpired && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center">
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-sm animate-scale-fade-in">
+          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 max-w-sm animate-scale-fade-in">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">
