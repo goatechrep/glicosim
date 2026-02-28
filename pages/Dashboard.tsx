@@ -241,7 +241,7 @@ const DashboardPage: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
+    <div className="flex flex-col gap-4 animate-fade-in">
       {/** Avisos para instalar App*/}
       <PWAInstallPrompt mode="banner" />
       <div className="flex items-center justify-between">

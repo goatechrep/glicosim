@@ -329,7 +329,7 @@ const App: React.FC = () => {
                         <LogoutButton />
                       </div>
 
-                      <main className={`flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-6 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-8 md:px-10 md:py-12 custom-scrollbar relative`}>
+                      <main className={`flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-4 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-8 md:px-10 md:py-12 custom-scrollbar relative`}>
                         <LazyPage>
                           <Routes>
                             <Route path="/" element={<DashboardPage />} />

@@ -148,7 +148,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
       {mode === 'banner' ? (
         <button
           onClick={() => setOpen(true)}
-          className="mb-2 w-full flex items-center justify-between gap-3 px-3 py-2.5 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 rounded-lg transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30"
+          className="my-2 w-full flex items-center justify-between gap-3 px-3 py-2.5 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 rounded-lg transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30"
           aria-label="Instalar aplicativo no celular"
         >
           <span className="flex items-center gap-2">
