@@ -87,6 +87,7 @@ const DashboardPage: React.FC = () => {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [failedBannerImages, setFailedBannerImages] = useState<Record<string, boolean>>({});
   const [healthTickerItems, setHealthTickerItems] = useState<HealthTipArticle[]>([]);
   const banners = getBannersForPage('dashboard');
 
@@ -318,37 +319,37 @@ const DashboardPage: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col gap-4 animate-fade-in">
+    <div className="flex flex-col gap-3 md:gap-4 animate-fade-in overflow-x-hidden">
       {/** Avisos para instalar App*/}
       <PWAInstallPrompt mode="banner" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Boas vindas ao usuário */}
-        <div className="flex items-center gap-4 animate-slide-up-subtle">
+        <div className="flex items-center gap-3 sm:gap-4 animate-slide-up-subtle min-w-0">
           {user?.foto && (
-            <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-orange-200 dark:border-orange-900/30">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 border-orange-200 dark:border-orange-900/30 shrink-0">
               <img src={user.foto} alt={user.nome} className="w-full h-full object-cover" />
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Olá, <span className="text-orange-600">{user?.nome?.split(' ')[0] || 'Usuário'}!</span></h2>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">Olá, <span className="text-orange-600">{user?.nome?.split(' ')[0] || 'Usuário'}!</span></h2>
               <span className={`px-2 py-1 text-[8px] font-black uppercase tracking-wider rounded ${user?.plano === 'PRO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
                 {user?.plano}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               {user?.plano === 'PRO' && lastSync ? `Última sincronização: ${lastSync}` : 'Atualize para o PRO para sincronizar seus dados na nuvem'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 self-start sm:self-auto">
           {/* Desktop: Badge completo */}
           <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full border ${isOnline && user?.plano === 'PRO' ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20'}`}>
             <span className="material-symbols-outlined text-[14px]">{isOnline ? 'wifi' : 'wifi_off'}</span>
             <span className="text-[10px] font-black uppercase tracking-widest">{isOnline && user?.plano === 'PRO' ? 'Sincronizado' : 'Offline'}</span>
           </div>
           {/* Mobile: Apenas ícone */}
-          <div className={`md:hidden flex items-center justify-center w-10 h-10 rounded-full border-2 ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20'}`}>
+          <div className={`md:hidden flex items-center justify-center w-9 h-9 rounded-full border-2 ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20'}`}>
             <span className={`material-symbols-outlined text-[18px] ${isOnline && user?.plano === 'PRO' ? 'text-emerald-500' : 'text-red-500'}`}>{isOnline ? 'wifi' : 'wifi_off'}</span>
           </div>
           {/* Botão de Sincronizar */}
@@ -356,9 +357,9 @@ const DashboardPage: React.FC = () => {
             <button
               onClick={handleSync}
               disabled={!isOnline || syncing}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border font-black text-[10px] uppercase tracking-widest transition-all ${isOnline ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20 opacity-50 cursor-not-allowed'}`}
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-full border font-black text-[10px] uppercase tracking-widest transition-all ${isOnline ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20 opacity-50 cursor-not-allowed'}`}
             >
-              <span className="material-symbols-outlined text-[16px] ${syncing ? 'animate-spin' : ''}">{syncing ? 'sync' : 'cloud_sync'}</span>
+              <span className={`material-symbols-outlined text-[16px] ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_sync'}</span>
               <span className="hidden md:inline">{syncing ? 'Sincronizando...' : 'Sincronizar'}</span>
             </button>
           )}
@@ -367,7 +368,7 @@ const DashboardPage: React.FC = () => {
 
       {lowStockMeds.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-amber-600">warning</span>
               <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest">Estoque Baixo de Medicamentos</h3>
@@ -391,7 +392,7 @@ const DashboardPage: React.FC = () => {
 
       {dueReminders.length > 0 && !reminderModalOpen && (
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-blue-600">schedule</span>
               <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest">Lembretes Pendentes</h3>
@@ -415,7 +416,7 @@ const DashboardPage: React.FC = () => {
 
       {stats.alerts && stats.alerts.length > 0 && (
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600">notifications_active</span>
               <h3 className="text-xs font-black text-red-600 uppercase tracking-widest">Alertas Pendentes</h3>
@@ -427,36 +428,50 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* Banner de Avisos / Propaganda em Slide */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-3 gap-3 md:gap-4">
         <div className="md:col-span-2 space-y-3">
-          <div className="relative overflow-hidden rounded-2xl h-64 md:h-44">
+          <div className="relative overflow-hidden rounded-2xl h-72 sm:h-64 md:h-44">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+              className={`absolute inset-0 transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
                 }`}
             >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full relative`}>
-                <div className="relative z-10 h-full flex flex-col pr-8 pb-10 md:pb-8">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full relative overflow-hidden`}>
+                {banner.contentType === 'image' && banner.imageSrc && !failedBannerImages[banner.id] ? (
+                  <>
+                    <img
+                      src={banner.imageSrc}
+                      alt={banner.imageAlt || banner.title}
+                      className={`absolute inset-0 w-full h-full ${banner.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                      onError={() => setFailedBannerImages(prev => ({ ...prev, [banner.id]: true }))}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10" />
+                  </>
+                ) : null}
+
+                <div className="relative z-10 h-full flex flex-col min-w-0 pr-6 sm:pr-8 pb-10 md:pb-8">
+                  <div className="flex items-center gap-2 mb-2 min-w-0">
+                    <span className="material-symbols-outlined text-2xl shrink-0">{banner.icon}</span>
                     {banner.badge && (
-                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded">
+                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded truncate max-w-[70%]">
                         {banner.badge}
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg md:text-xl font-black uppercase mb-1">{banner.title}</h3>
-                  <p className={`${banner.textColor} text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none`}>{banner.description}</p>
+                  <h3 className="text-base sm:text-lg md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-[11px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
                   <button
                     onClick={() => window.location.hash = banner.buttonLink}
-                    className="mt-auto self-start px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
+                    className="mt-auto self-start max-w-full px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
                   >
-                    {banner.buttonText}
+                    <span className="block truncate">{banner.buttonText}</span>
                   </button>
                 </div>
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                {(banner.contentType !== 'image' || failedBannerImages[banner.id]) && (
+                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                )}
               </div>
             </div>
           ))}
@@ -518,17 +533,17 @@ const DashboardPage: React.FC = () => {
             </div>
           </NavLink>
         </div>
-        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
           <div className="text-center">
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Propaganda</p>
-            <div className="w-[300px] max-w-full h-[200px] bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+            <div className="w-full sm:w-[300px] max-w-full h-[200px] bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
               <span className="text-slate-400 text-xs p-4">Anúncio 300x200</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 stagger-children">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 stagger-children">
         <Card title="Glicemia Média" value={`${stats.average}`} unit="mg/dL" icon="insights" trend={stats.average > 120 ? 'Alta' : 'Estável'} />
         <Card title="Na Média" value={`${Math.min(100, Math.max(0, 100 - (stats.average > 120 ? (stats.average - 120) / 2 : 0)))}%`} unit="" icon="check_circle" color="text-emerald-500 dark:text-emerald-400" />
         <Card title="Atual" value={`${stats.lastGlicemy}`} unit="mg/dL" icon="timer" />
@@ -540,7 +555,7 @@ const DashboardPage: React.FC = () => {
         return (
           <>
             {/* Mobile: Banner Upgrade PRO */}
-            <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
+            <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
               <div className="relative z-10 text-center">
                 <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
                 <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
@@ -548,8 +563,8 @@ const DashboardPage: React.FC = () => {
                   <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
                   <span className="text-orange-200">/{proPlan?.periodo}</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
-                  <span>Conhecer Plano {proPlan?.nome}</span>
+                <div className="inline-flex max-w-full items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
+                  <span className="break-words">Conhecer Plano {proPlan?.nome}</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </div>
               </div>
@@ -567,7 +582,7 @@ const DashboardPage: React.FC = () => {
       })()}
 
       <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-4">
+        <div className="p-4 sm:p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-3 md:gap-4">
           <div>
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência da Glicemia</h3>
             <p className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -575,13 +590,13 @@ const DashboardPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl w-full sm:w-auto">
             {periodOptions.map(option => (
               <button
                 key={option.value}
                 onClick={() => setPeriod(option.value)}
                 className={`
-                  px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg
+                  flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg
                   transition-all duration-200
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-1
                   ${period === option.value
@@ -597,7 +612,7 @@ const DashboardPage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="h-[250px] md:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
@@ -689,9 +704,9 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2 pb-24 md:pb-0">
+      <div className="grid gap-4 md:gap-8 md:grid-cols-2 pb-24 md:pb-0">
         <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] flex flex-col">
-          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
+          <div className="p-4 sm:p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Medicamentos</h3>
             <NavLink
               to="/medicamentos"
@@ -702,23 +717,23 @@ const DashboardPage: React.FC = () => {
               <span className="material-symbols-outlined text-[20px]">arrow_outward</span>
             </NavLink>
           </div>
-          <div className="p-8 flex-1">
+          <div className="p-4 sm:p-6 md:p-8 flex-1">
             {medicationService.getMedications().length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-8">Nenhum medicamento cadastrado</p>
             ) : (
               <div className="space-y-4">
                 {medicationService.getMedications().slice(0, 5).map(med => (
-                  <div key={med.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
+                  <div key={med.id} className="flex items-center justify-between gap-3 group">
+                    <div className="flex items-center gap-4 min-w-0">
                       <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-400 group-hover:text-blue-600 transition-all">
                         <span className="material-symbols-outlined text-[22px]">medication</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{med.nome}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{med.nome}</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{med.unidade}</span>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <span className={`text-xl font-black tracking-tighter ${med.quantidade <= med.limiteEstoque ? 'text-amber-600' : 'text-blue-600'}`}>{med.quantidade}</span>
                       <span className="text-[10px] text-slate-400 font-black ml-1 uppercase">{med.unidade}</span>
                     </div>
@@ -730,7 +745,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] flex flex-col">
-          <div className="p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
+          <div className="p-4 sm:p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
             <NavLink
               to="/registros"
@@ -741,20 +756,20 @@ const DashboardPage: React.FC = () => {
               <span className="material-symbols-outlined text-[20px]">arrow_outward</span>
             </NavLink>
           </div>
-          <div className="p-8 flex-1">
+          <div className="p-4 sm:p-6 md:p-8 flex-1">
             <div className="space-y-6">
               {records.slice(0, 5).map(record => (
-                <div key={record.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
+                <div key={record.id} className="flex items-center justify-between gap-3 group">
+                  <div className="flex items-center gap-4 min-w-0">
                     <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
                       <span className="material-symbols-outlined text-[22px]">water_drop</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{record.periodo}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{record.periodo}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{record.data.split('-').reverse().slice(0, 2).join('/')}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <span className={`text-xl font-black tracking-tighter ${record.antesRefeicao > 140 ? 'text-amber-600' : 'text-orange-600'}`}>{record.antesRefeicao}</span>
                     <span className="text-[10px] text-slate-400 font-black ml-1 uppercase">mg/dL</span>
                   </div>
@@ -766,7 +781,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {user?.plano !== 'PRO' && (
-        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
+        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 dark:border-slate-800">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
           <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
             <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-after-activities')?.format}</span>
@@ -886,7 +901,7 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
     group relative
     rounded-3xl border border-slate-200 dark:border-slate-800/80 
     bg-white dark:bg-[#111121] 
-    p-7 
+    p-4 sm:p-6 md:p-7
     transition-all duration-300 ease-out
     hover:-translate-y-1
   ">
@@ -894,9 +909,9 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
     <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-orange-500/0 to-orange-500/0 group-hover:from-orange-500/5 group-hover:to-orange-500/10 transition-all duration-500 pointer-events-none" />
 
     <div className="relative z-10">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="
-          w-12 h-12 
+          w-10 h-10 sm:w-12 sm:h-12
           bg-gradient-to-br from-slate-50 to-slate-100 
           dark:from-slate-900 dark:to-slate-800
           border border-slate-200 dark:border-slate-700
@@ -908,11 +923,11 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
           group-hover:rotate-3
           transition-all duration-300
         ">
-          <span className="material-symbols-outlined text-[22px]" aria-hidden="true">{icon}</span>
+          <span className="material-symbols-outlined text-[20px] sm:text-[22px]" aria-hidden="true">{icon}</span>
         </div>
         {trend && (
           <span className="
-            px-3 py-1.5 
+            px-2.5 py-1 sm:px-3 sm:py-1.5
             bg-emerald-50 dark:bg-emerald-900/10 
             text-emerald-600 dark:text-emerald-400
             border border-emerald-200 dark:border-emerald-800
@@ -924,12 +939,12 @@ const Card = memo<CardProps>(({ title, value, unit, icon, color = "text-slate-90
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <p className="text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-[0.15em]">
           {title}
         </p>
         <div className="flex items-baseline gap-2">
-          <span className={`text-4xl font-black tracking-tighter ${color}`}>
+          <span className={`text-3xl sm:text-4xl font-black tracking-tighter ${color}`}>
             {value}
           </span>
           <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">

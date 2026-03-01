@@ -116,7 +116,7 @@ const Footer: React.FC = () => {
             Este aplicativo não substitui consultas médicas. Sempre consulte seu médico ou profissional de saúde.
           </p>
         </div>
-        <div className="pt-6 flex items-center justify-between">
+        <div className="pt-6 flex sm:flex-row flex-col items-center sm:justify-between justify-center gap-4">
           <p className="text-[10px] text-slate-500 dark:text-slate-500">
             © {currentYear} GlicoSIM. Todos os direitos reservados.
           </p>

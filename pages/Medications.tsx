@@ -18,6 +18,7 @@ const MedicationsPage: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [failedBannerImages, setFailedBannerImages] = useState<Record<string, boolean>>({});
   const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
     nome: '',
@@ -127,34 +128,49 @@ const MedicationsPage: React.FC = () => {
 
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-48 md:h-40">
+        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-64 sm:h-52 md:h-40">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
               className={`absolute inset-0 transition-all duration-500 ${
-                index === currentBannerIndex ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'
+                index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
               }`}
             >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-6 text-white h-full`}>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-2xl">{banner.icon}</span>
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 sm:p-5 md:p-6 text-white h-full relative overflow-hidden`}>
+                {banner.contentType === 'image' && banner.imageSrc && !failedBannerImages[banner.id] ? (
+                  <>
+                    <img
+                      src={banner.imageSrc}
+                      alt={banner.imageAlt || banner.title}
+                      className={`absolute inset-0 w-full h-full ${banner.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                      onError={() => setFailedBannerImages(prev => ({ ...prev, [banner.id]: true }))}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10" />
+                  </>
+                ) : null}
+
+                <div className="relative z-10 h-full flex flex-col min-w-0 pr-6 sm:pr-8 pb-8 md:pb-4">
+                  <div className="flex items-center gap-2 mb-2 min-w-0">
+                    <span className="material-symbols-outlined text-2xl shrink-0">{banner.icon}</span>
                     {banner.badge && (
-                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded">
+                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded truncate max-w-[70%]">
                         {banner.badge}
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-black uppercase mb-2">{banner.title}</h3>
-                  <p className={`${banner.textColor} text-sm mb-4`}>{banner.description}</p>
+                  <h3 className="text-base sm:text-lg md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-[11px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
                   <button
                     onClick={() => window.location.hash = banner.buttonLink}
-                    className="px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
+                    className="mt-auto self-start max-w-full px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all"
                   >
-                    {banner.buttonText}
+                    <span className="block truncate">{banner.buttonText}</span>
                   </button>
                 </div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                {(banner.contentType !== 'image' || failedBannerImages[banner.id]) && (
+                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                )}
               </div>
             </div>
           ))}

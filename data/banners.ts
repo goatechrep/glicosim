@@ -8,6 +8,10 @@ export interface Banner {
   icon: string;
   gradient: string;
   textColor: string;
+  contentType?: 'text' | 'image';
+  imageSrc?: string;
+  imageAlt?: string;
+  imageFit?: 'cover' | 'contain';
   enabled: boolean;
 }
 
@@ -47,6 +51,22 @@ export const banners: Banner[] = [
     gradient: 'from-orange-500 to-orange-600',
     textColor: 'text-orange-100',
     enabled: true
+  },
+  {
+    id: 'banner-4',
+    title: 'Plano PRO Sem Limites',
+    description: 'Sincronização na nuvem, backup automático e recursos avançados para seu controle diário.',
+    badge: 'Visual',
+    buttonText: 'Conhecer Plano',
+    buttonLink: '#/pro',
+    icon: 'image',
+    gradient: 'from-orange-600 to-orange-700',
+    textColor: 'text-slate-100',
+    contentType: 'image',
+    imageSrc: '/banners/dashboard-slide.png',
+    imageAlt: 'Banner visual do plano PRO',
+    imageFit: 'cover',
+    enabled: true
   }
 ];
 
@@ -56,7 +76,7 @@ export interface BannerConfig {
 }
 
 export const bannerConfig: BannerConfig = {
-  dashboard: ['banner-1', 'banner-2'],
+  dashboard: ['banner-1', 'banner-4'],
   medications: ['banner-3', 'banner-2']
 };
 

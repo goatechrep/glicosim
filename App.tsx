@@ -347,7 +347,7 @@ const App: React.FC = () => {
 
                       {/* Fixed Mobile Bottom Navigation */}
                       <nav
-                        className="md:hidden fixed bottom-3 left-3 right-3 bg-white/35 dark:bg-slate-900/35 supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] rounded-lg shadow-[0_10px_30px_rgba(15,23,42,0.18)] z-[1000] flex items-center justify-between px-3 pt-2"
+                        className="md:hidden fixed bottom-3 left-3 right-3 bg-white/35 dark:bg-slate-900/35 supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] z-[1000] flex items-center justify-between px-3 pt-2"
                         style={{ paddingBottom: 'max(0.65rem, env(safe-area-inset-bottom))' }}
                         aria-label="Menu de navegação principal"
                       >
