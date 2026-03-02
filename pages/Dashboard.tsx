@@ -428,16 +428,16 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* Banner de Avisos / Propaganda em Slide */}
-      <div className="grid md:grid-cols-3 gap-3 md:gap-4">
-        <div className="md:col-span-2 space-y-3">
-          <div className="relative overflow-hidden rounded-2xl h-72 sm:h-64 md:h-44">
+      <div className="grid md:grid-cols-3 gap-3 md:gap-4 min-w-0">
+        <div className="md:col-span-2 space-y-3 min-w-0">
+          <div className="relative overflow-hidden rounded-2xl h-72 sm:h-64 md:h-44 w-full max-w-full min-w-0">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
+              className={`absolute inset-0 w-full max-w-full transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
                 }`}
             >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full relative overflow-hidden`}>
+              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full w-full max-w-full relative overflow-hidden`}>
                 {banner.contentType === 'image' && banner.imageSrc && !failedBannerImages[banner.id] ? (
                   <>
                     <img
@@ -450,7 +450,7 @@ const DashboardPage: React.FC = () => {
                   </>
                 ) : null}
 
-                <div className="relative z-10 h-full flex flex-col min-w-0 pr-6 sm:pr-8 pb-10 md:pb-8">
+                <div className="relative z-10 h-full flex flex-col min-w-0 max-w-full pr-6 sm:pr-8 pb-10 md:pb-8">
                   <div className="flex items-center gap-2 mb-2 min-w-0">
                     <span className="material-symbols-outlined text-2xl shrink-0">{banner.icon}</span>
                     {banner.badge && (
@@ -459,8 +459,8 @@ const DashboardPage: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-base sm:text-lg md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
-                  <p className={`${banner.textColor} text-[11px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
+                  <h3 className="text-sm sm:text-base md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
+                  <p className={`${banner.textColor} text-[10px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-2 sm:line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
                   <button
                     onClick={() => window.location.hash = banner.buttonLink}
                     className="mt-auto self-start max-w-full px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
