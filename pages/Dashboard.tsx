@@ -123,6 +123,19 @@ const DashboardPage: React.FC = () => {
     loadHealthTicker();
   }, []);
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      } catch (error) {
+        console.error('Erro ao limpar cache:', error);
+      }
+    }
+    window.location.reload();
+  };
+
   const handleSync = async () => {
     if (!isOnline || user?.plano !== 'PRO' || syncing || !user?.id) return;
     setSyncing(true);
@@ -343,6 +356,16 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2.5 sm:gap-3 self-start sm:self-auto">
+          {/* Botão de Atualizar App/Limpar Cache */}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 transition-all shadow-sm"
+            title="Atualizar e limpar cache"
+            aria-label="Atualizar e limpar cache"
+          >
+            <span className="material-symbols-outlined text-[18px]">refresh</span>
+          </button>
+
           {/* Desktop: Badge completo */}
           <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full border ${isOnline && user?.plano === 'PRO' ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20'}`}>
             <span className="material-symbols-outlined text-[14px]">{isOnline ? 'wifi' : 'wifi_off'}</span>
@@ -431,62 +454,62 @@ const DashboardPage: React.FC = () => {
       <div className="grid md:grid-cols-3 gap-3 md:gap-4 min-w-0">
         <div className="md:col-span-2 space-y-3 min-w-0">
           <div className="relative overflow-hidden rounded-2xl h-72 sm:h-64 md:h-44 w-full max-w-full min-w-0">
-          {banners.map((banner, index) => (
-            <div
-              key={banner.id}
-              className={`absolute inset-0 w-full max-w-full transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
-                }`}
-            >
-              <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full w-full max-w-full relative overflow-hidden`}>
-                {banner.contentType === 'image' && banner.imageSrc && !failedBannerImages[banner.id] ? (
-                  <>
-                    <img
-                      src={banner.imageSrc}
-                      alt={banner.imageAlt || banner.title}
-                      className={`absolute inset-0 w-full h-full ${banner.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
-                      onError={() => setFailedBannerImages(prev => ({ ...prev, [banner.id]: true }))}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10" />
-                  </>
-                ) : null}
+            {banners.map((banner, index) => (
+              <div
+                key={banner.id}
+                className={`absolute inset-0 w-full max-w-full transition-all duration-500 ${index === currentBannerIndex ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-full pointer-events-none'
+                  }`}
+              >
+                <div className={`bg-gradient-to-br ${banner.gradient} rounded-2xl p-4 md:p-6 text-white h-full w-full max-w-full relative overflow-hidden`}>
+                  {banner.contentType === 'image' && banner.imageSrc && !failedBannerImages[banner.id] ? (
+                    <>
+                      <img
+                        src={banner.imageSrc}
+                        alt={banner.imageAlt || banner.title}
+                        className={`absolute inset-0 w-full h-full ${banner.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                        onError={() => setFailedBannerImages(prev => ({ ...prev, [banner.id]: true }))}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10" />
+                    </>
+                  ) : null}
 
-                <div className="relative z-10 h-full flex flex-col min-w-0 max-w-full pr-6 sm:pr-8 pb-10 md:pb-8">
-                  <div className="flex items-center gap-2 mb-2 min-w-0">
-                    <span className="material-symbols-outlined text-2xl shrink-0">{banner.icon}</span>
-                    {banner.badge && (
-                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded truncate max-w-[70%]">
-                        {banner.badge}
-                      </span>
-                    )}
+                  <div className="relative z-10 h-full flex flex-col min-w-0 max-w-full pr-6 sm:pr-8 pb-10 md:pb-8">
+                    <div className="flex items-center gap-2 mb-2 min-w-0">
+                      <span className="material-symbols-outlined text-2xl shrink-0">{banner.icon}</span>
+                      {banner.badge && (
+                        <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded truncate max-w-[70%]">
+                          {banner.badge}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm sm:text-base md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
+                    <p className={`${banner.textColor} text-[10px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-2 sm:line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
+                    <button
+                      onClick={() => window.location.hash = banner.buttonLink}
+                      className="mt-auto self-start max-w-full px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
+                    >
+                      <span className="block truncate">{banner.buttonText}</span>
+                    </button>
                   </div>
-                  <h3 className="text-sm sm:text-base md:text-xl font-black uppercase mb-1 leading-tight break-words max-w-full">{banner.title}</h3>
-                  <p className={`${banner.textColor} text-[10px] sm:text-xs md:text-sm mb-3 md:mb-4 leading-relaxed line-clamp-2 sm:line-clamp-3 md:line-clamp-none break-words max-w-full`}>{banner.description}</p>
-                  <button
-                    onClick={() => window.location.hash = banner.buttonLink}
-                    className="mt-auto self-start max-w-full px-4 py-2 bg-white text-slate-900 font-black text-xs uppercase rounded-lg hover:bg-slate-50 transition-all shadow-lg z-30"
-                  >
-                    <span className="block truncate">{banner.buttonText}</span>
-                  </button>
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                  {(banner.contentType !== 'image' || failedBannerImages[banner.id]) && (
+                    <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                  )}
                 </div>
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
-                {(banner.contentType !== 'image' || failedBannerImages[banner.id]) && (
-                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                )}
               </div>
-            </div>
-          ))}
-          {banners.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-              {banners.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentBannerIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
-                    }`}
-                />
-              ))}
-            </div>
-          )}
+            ))}
+            {banners.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                {banners.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentBannerIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${index === currentBannerIndex ? 'bg-white w-6' : 'bg-white/50'
+                      }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           <NavLink
             to="/dicas-saude"
@@ -615,70 +638,70 @@ const DashboardPage: React.FC = () => {
         <div className="p-4 sm:p-6">
           <div className="h-[250px] md:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#cbd5e1" opacity={0.3} className="dark:opacity-10" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
-                dy={12}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
-                domain={[0, 300]}
-              />
-              <Tooltip
-                cursor={{ stroke: '#f97316', strokeOpacity: 0.25, strokeWidth: 1 }}
-                contentStyle={{
-                  backgroundColor: 'rgba(255,255,255,0.98)',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
-                  padding: '8px 10px',
-                  minWidth: '180px'
-                }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const point = payload[0]?.payload as any;
-                  const status = getGlycemiaStatus(point.val);
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#cbd5e1" opacity={0.3} className="dark:opacity-10" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
+                  dy={12}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
+                  domain={[0, 300]}
+                />
+                <Tooltip
+                  cursor={{ stroke: '#f97316', strokeOpacity: 0.25, strokeWidth: 1 }}
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.98)',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
+                    padding: '8px 10px',
+                    minWidth: '180px'
+                  }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const point = payload[0]?.payload as any;
+                    const status = getGlycemiaStatus(point.val);
 
-                  return (
-                    <div className="rounded-xl border border-slate-200 bg-white/95 shadow-2xl p-2 min-w-[180px]">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{point.name}</p>
-                      <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                        <p className="text-base font-black text-orange-600">{point.val} <span className="text-[10px] text-slate-500">mg/dL</span></p>
-                        <p className={`text-[10px] font-black ${status.color}`}>{status.label}</p>
+                    return (
+                      <div className="rounded-xl border border-slate-200 bg-white/95 shadow-2xl p-2 min-w-[180px]">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{point.name}</p>
+                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                          <p className="text-base font-black text-orange-600">{point.val} <span className="text-[10px] text-slate-500">mg/dL</span></p>
+                          <p className={`text-[10px] font-black ${status.color}`}>{status.label}</p>
+                        </div>
+                        <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                          <p className="text-slate-600">Mín: <span className="font-black text-slate-900">{point.min}</span></p>
+                          <p className="text-slate-600">Máx: <span className="font-black text-slate-900">{point.max}</span></p>
+                          <p className="text-slate-600">Medições: <span className="font-black text-slate-900">{point.count}</span></p>
+                          <p className="text-slate-600">Vs média período: <span className={`font-black ${point.deltaPeriod > 0 ? 'text-red-600' : point.deltaPeriod < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>{point.deltaPeriod > 0 ? `+${point.deltaPeriod}` : point.deltaPeriod} mg/dL</span></p>
+                        </div>
                       </div>
-                      <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                        <p className="text-slate-600">Mín: <span className="font-black text-slate-900">{point.min}</span></p>
-                        <p className="text-slate-600">Máx: <span className="font-black text-slate-900">{point.max}</span></p>
-                        <p className="text-slate-600">Medições: <span className="font-black text-slate-900">{point.count}</span></p>
-                        <p className="text-slate-600">Vs média período: <span className={`font-black ${point.deltaPeriod > 0 ? 'text-red-600' : point.deltaPeriod < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>{point.deltaPeriod > 0 ? `+${point.deltaPeriod}` : point.deltaPeriod} mg/dL</span></p>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="val"
-                stroke="#f97316"
-                strokeWidth={4}
-                fillOpacity={1}
-                fill="url(#orangeGrad)"
-                dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }}
-              />
-            </AreaChart>
+                    );
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="val"
+                  stroke="#f97316"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#orangeGrad)"
+                  dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
           {chartInsights && (

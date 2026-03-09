@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Logo e Copyright */}
           <div>
-            <div className="flex sm:justify-right justify-center items-center gap-2 mb-4">
+            <div className="md:justify-center justify-left items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center rotate-3">
                 <span className="material-symbols-outlined text-white text-[18px]">bloodtype</span>
               </div>
@@ -22,7 +22,7 @@ const Footer: React.FC = () => {
                 Glico<span className="text-orange-600">SIM</span>
               </h3>
             </div>
-            <p className="text-xs sm:text-right text-center text-justify text-slate-600 dark:text-slate-400 mb-2">
+            <p className="text-xs sm:text-right text-center sm:text-justify text-slate-600 dark:text-slate-400 mb-2">
               {appInfo.description}
             </p>
 
