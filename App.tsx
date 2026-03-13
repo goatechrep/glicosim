@@ -324,7 +324,11 @@ const App: React.FC = () => {
                           </div>
                           <span className="font-black text-base uppercase">Glico<span className="text-orange-600">SIM</span></span>
                         </div>
-                        <LogoutButton />
+
+                        <div className="flex items-center gap-2">
+                          <DashboardMobileControls />
+                          <LogoutButton />
+                        </div>
                       </div>
 
                       <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full max-w-7xl mx-auto px-4 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-8 md:px-10 md:py-12 custom-scrollbar relative`}>
@@ -353,14 +357,14 @@ const App: React.FC = () => {
                       >
                         <div className="flex w-[40%] justify-around">
                           <MobileNavItem to="/" icon="home" label="Início" />
-                          <MobileNavItem to="/registros" icon="analytics" label="Histórico" />
+                          <MobileNavItem to="/registros" icon="bloodtype" label="Histórico" />
                         </div>
 
                         {/* Center Floating Action Button (FAB) */}
                         <div className="relative w-[20%] flex justify-center">
                           <Link
                             to="/registros?new=true"
-                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] shadow-lg shadow-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                             aria-label="Adicionar novo registro"
                           >
                             <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">add</span>
@@ -401,12 +405,11 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600' : 'text-slate-500 dark:text-slate-300'}`
+      `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600 shadow-[0_0_15px_-3px_rgba(234,88,12,0.15)] bg-orange-50 dark:bg-orange-900/10' : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}`
     }
     aria-label={label}
   >
-    <span className="material-symbols-outlined text-[24px]" aria-hidden="true">{icon}</span>
-    <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
+    <span className="material-symbols-outlined text-[28px]" aria-hidden="true">{icon}</span>
   </NavLink>
 );
 
@@ -424,6 +427,120 @@ const LogoutButton: React.FC = () => {
     >
       <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-[20px]">logout</span>
     </button>
+  );
+};
+
+const DashboardMobileControls: React.FC = () => {
+  const { pathname } = window.location.hash.includes('#') ? { pathname: window.location.hash.split('?')[0].replace('#', '') } : { pathname: '/' };
+  const { user } = useAuth();
+  const [isOnline, setIsOnline] = useState(window.navigator.onLine);
+  const [showRefreshPopover, setShowRefreshPopover] = useState(false);
+  const [showOfflinePopover, setShowOfflinePopover] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.popover-container')) {
+        setShowRefreshPopover(false);
+        setShowOfflinePopover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (pathname !== '/' && pathname !== '') return null;
+
+  const handleRefresh = async () => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+      window.location.reload();
+    } catch (e) {
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Botão de Atualizar App/Limpar Cache */}
+      <div className="relative popover-container">
+        <button
+          onClick={() => setShowRefreshPopover(!showRefreshPopover)}
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Limpar cache e recarregar"
+        >
+          <span className="material-symbols-outlined text-[20px]">refresh</span>
+        </button>
+
+        {showRefreshPopover && (
+          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-50px] md:top-full mt-2 md:w-64 p-4 z-[1200] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-100 dark:border-blue-800 shadow-2xl animate-fade-in md:translate-x-[-20%]">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shrink-0">
+                <span className="material-symbols-outlined text-[18px]">info</span>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-black uppercase text-blue-600 tracking-widest mb-1">Atualização Forçada</h4>
+                <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                  Isso removerá o cache do seu navegador e carregará os dados mais recentes da nuvem.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { handleRefresh(); setShowRefreshPopover(false); }}
+              className="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all font-bold"
+            >
+              Limpar Agora
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile: Apenas ícone de Status */}
+      <div className="relative popover-container">
+        <div
+          onClick={() => user?.plano === 'FREE' && setShowOfflinePopover(!showOfflinePopover)}
+          className={`flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg border-2 active:scale-95 transition-all ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}
+        >
+          <span className={`material-symbols-outlined text-[20px] ${isOnline && user?.plano === 'PRO' ? 'text-emerald-500' : 'text-red-500'}`}>{isOnline ? 'wifi' : 'wifi_off'}</span>
+        </div>
+
+        {showOfflinePopover && (
+          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-10px] md:top-full mt-2 md:w-64 p-4 z-[1200] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-100 dark:border-red-800 shadow-2xl animate-fade-in">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shrink-0">
+                <span className="material-symbols-outlined text-[18px]">cloud_off</span>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-black uppercase text-red-600 tracking-widest mb-1">Backup Desativado</h4>
+                <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                  Na versão FREE, seus dados ficam salvos apenas neste aparelho. Torne-se PRO para backup em nuvem.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { window.location.hash = '#/pro'; setShowOfflinePopover(false); }}
+              className="w-full py-2 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 font-bold"
+            >
+              <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+              Assinar PRO
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -89,7 +89,47 @@ const DashboardPage: React.FC = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [failedBannerImages, setFailedBannerImages] = useState<Record<string, boolean>>({});
   const [healthTickerItems, setHealthTickerItems] = useState<HealthTipArticle[]>([]);
+  const [showRefreshPopover, setShowRefreshPopover] = useState(false);
+  const [showOfflinePopover, setShowOfflinePopover] = useState(false);
   const banners = getBannersForPage('dashboard');
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      // Don't close if clicking inside a popover container
+      if (!(e.target as HTMLElement).closest('.popover-container')) {
+        setShowRefreshPopover(false);
+        setShowOfflinePopover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Hover timers to prevent flickering
+  const [refreshHoverTimeout, setRefreshHoverTimeout] = useState<any>(null);
+  const [offlineHoverTimeout, setOfflineHoverTimeout] = useState<any>(null);
+
+  const handleRefreshHover = (show: boolean) => {
+    if (window.innerWidth < 768) return; // Only hover on desktop
+    if (show) {
+      if (refreshHoverTimeout) clearTimeout(refreshHoverTimeout);
+      setShowRefreshPopover(true);
+    } else {
+      const timeout = setTimeout(() => setShowRefreshPopover(false), 200);
+      setRefreshHoverTimeout(timeout);
+    }
+  };
+
+  const handleOfflineHover = (show: boolean) => {
+    if (window.innerWidth < 768) return; // Only hover on desktop
+    if (show) {
+      if (offlineHoverTimeout) clearTimeout(offlineHoverTimeout);
+      setShowOfflinePopover(true);
+    } else {
+      const timeout = setTimeout(() => setShowOfflinePopover(false), 200);
+      setOfflineHoverTimeout(timeout);
+    }
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -356,26 +396,82 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2.5 sm:gap-3 self-start sm:self-auto">
-          {/* Botão de Atualizar App/Limpar Cache */}
-          <button
-            onClick={handleRefresh}
-            className="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 transition-all shadow-sm"
-            title="Atualizar e limpar cache"
-            aria-label="Atualizar e limpar cache"
+          {/* Botão de Atualizar App/Limpar Cache (Desktop Only) */}
+          <div
+            className="relative popover-container hidden md:block"
+            onMouseEnter={() => handleRefreshHover(true)}
+            onMouseLeave={() => handleRefreshHover(false)}
           >
-            <span className="material-symbols-outlined text-[18px]">refresh</span>
-          </button>
+            <button
+              onClick={() => setShowRefreshPopover(!showRefreshPopover)}
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all shadow-sm"
+              aria-label="Limpar cache e recarregar"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
 
-          {/* Desktop: Badge completo */}
-          <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full border ${isOnline && user?.plano === 'PRO' ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20'}`}>
-            <span className="material-symbols-outlined text-[14px]">{isOnline ? 'wifi' : 'wifi_off'}</span>
-            <span className="text-[10px] font-black uppercase tracking-widest">{isOnline && user?.plano === 'PRO' ? 'Sincronizado' : 'Offline'}</span>
+            {showRefreshPopover && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-4 z-[100] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-100 dark:border-blue-800 shadow-2xl animate-fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-black uppercase text-blue-600 tracking-widest mb-1">Atualização Forçada</h4>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                      Isso removerá o cache do seu navegador e carregará os dados mais recentes da nuvem.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { handleRefresh(); setShowRefreshPopover(false); }}
+                  className="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 transition-all font-bold"
+                >
+                  Limpar Agora
+                </button>
+              </div>
+            )}
           </div>
-          {/* Mobile: Apenas ícone */}
-          <div className={`md:hidden flex items-center justify-center w-9 h-9 rounded-full border-2 ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-500 bg-red-50 dark:bg-red-900/20'}`}>
-            <span className={`material-symbols-outlined text-[18px] ${isOnline && user?.plano === 'PRO' ? 'text-emerald-500' : 'text-red-500'}`}>{isOnline ? 'wifi' : 'wifi_off'}</span>
+
+          {/* Desktop: Badge completo status/backup */}
+          <div
+            className="relative popover-container hidden md:block"
+            onMouseEnter={() => handleOfflineHover(true)}
+            onMouseLeave={() => handleOfflineHover(false)}
+          >
+            <div
+              onClick={() => user?.plano === 'FREE' && setShowOfflinePopover(!showOfflinePopover)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400' : 'border-red-500 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400'}`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{isOnline ? 'wifi' : 'wifi_off'}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isOnline && user?.plano === 'PRO' ? 'Sincronizado' : 'Offline'}</span>
+            </div>
+
+            {showOfflinePopover && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-4 z-[100] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-100 dark:border-red-800 shadow-2xl animate-fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">cloud_off</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-black uppercase text-red-600 tracking-widest mb-1">Backup Desativado</h4>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                      Na versão FREE, seus dados ficam salvos apenas neste aparelho. Torne-se PRO para backup em nuvem.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { window.location.hash = '#/pro'; setShowOfflinePopover(false); }}
+                  className="w-full py-2 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-orange-700 transition-all flex items-center justify-center gap-2 font-bold"
+                >
+                  <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                  Assinar PRO
+                </button>
+              </div>
+            )}
           </div>
-          {/* Botão de Sincronizar */}
+
+          {/* Botão de Sincronizar (apenas PRO) */}
           {user?.plano === 'PRO' && (
             <button
               onClick={handleSync}
@@ -387,68 +483,75 @@ const DashboardPage: React.FC = () => {
             </button>
           )}
         </div>
+
       </div>
 
-      {lowStockMeds.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 overflow-hidden">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-amber-600">warning</span>
-              <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest">Estoque Baixo de Medicamentos</h3>
+      {
+        lowStockMeds.length > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 overflow-hidden">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-600">warning</span>
+                <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest">Estoque Baixo de Medicamentos</h3>
+              </div>
+              <NavLink to="/medicamentos" className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline">Ver Estoque</NavLink>
             </div>
-            <NavLink to="/medicamentos" className="text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline">Ver Estoque</NavLink>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="flex gap-3 animate-slide-horizontal">
-              {lowStockMeds.map(m => (
-                <div key={m.id} className="flex-shrink-0 bg-white dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-800 min-w-[200px]">
-                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                    {m.nome}: {m.quantidade} {m.unidade}
-                  </p>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-500">Limite: {m.limiteEstoque}</p>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <div className="flex gap-3 animate-slide-horizontal">
+                {lowStockMeds.map(m => (
+                  <div key={m.id} className="flex-shrink-0 bg-white dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-800 min-w-[200px]">
+                    <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                      {m.nome}: {m.quantidade} {m.unidade}
+                    </p>
+                    <p className="text-[10px] text-amber-600 dark:text-amber-500">Limite: {m.limiteEstoque}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {dueReminders.length > 0 && !reminderModalOpen && (
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 overflow-hidden">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-blue-600">schedule</span>
-              <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest">Lembretes Pendentes</h3>
+      {
+        dueReminders.length > 0 && !reminderModalOpen && (
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 overflow-hidden">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600">schedule</span>
+                <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest">Lembretes Pendentes</h3>
+              </div>
+              <button onClick={() => { setCurrentReminder(dueReminders[0]); setReminderModalOpen(true); }} className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline">Ver Agora</button>
             </div>
-            <button onClick={() => { setCurrentReminder(dueReminders[0]); setReminderModalOpen(true); }} className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline">Ver Agora</button>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="flex gap-3 animate-slide-horizontal">
-              {dueReminders.map(r => (
-                <div key={r.id} className="flex-shrink-0 bg-white dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800 min-w-[200px]">
-                  <p className="text-xs font-bold text-blue-700 dark:text-blue-400">
-                    {r.recordData.periodo}
-                  </p>
-                  <p className="text-[10px] text-blue-600 dark:text-blue-500">Medir glicemia 2h após</p>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <div className="flex gap-3 animate-slide-horizontal">
+                {dueReminders.map(r => (
+                  <div key={r.id} className="flex-shrink-0 bg-white dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800 min-w-[200px]">
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400">
+                      {r.recordData.periodo}
+                    </p>
+                    <p className="text-[10px] text-blue-600 dark:text-blue-500">Medir glicemia 2h após</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {stats.alerts && stats.alerts.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-red-600">notifications_active</span>
-              <h3 className="text-xs font-black text-red-600 uppercase tracking-widest">Alertas Pendentes</h3>
+      {
+        stats.alerts && stats.alerts.length > 0 && (
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-600">notifications_active</span>
+                <h3 className="text-xs font-black text-red-600 uppercase tracking-widest">Alertas Pendentes</h3>
+              </div>
+              <NavLink to="/alertas" className="text-xs font-bold text-red-700 dark:text-red-400 hover:underline">Ver Todos</NavLink>
             </div>
-            <NavLink to="/alertas" className="text-xs font-bold text-red-700 dark:text-red-400 hover:underline">Ver Todos</NavLink>
+            <p className="text-sm font-bold text-red-700 dark:text-red-400">{stats.alerts.length} alerta(s) requer(em) sua atenção</p>
           </div>
-          <p className="text-sm font-bold text-red-700 dark:text-red-400">{stats.alerts.length} alerta(s) requer(em) sua atenção</p>
-        </div>
-      )}
+        )
+      }
 
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-3 md:gap-4 min-w-0">
@@ -573,36 +676,38 @@ const DashboardPage: React.FC = () => {
         <Card title="Alertas" value={`${stats.alerts?.length || 0}`} unit="ativos" icon="notifications" color="text-orange-500 dark:text-orange-400" />
       </div>
 
-      {user?.plano !== 'PRO' && (() => {
-        const proPlan = getPlanById('PRO');
-        return (
-          <>
-            {/* Mobile: Banner Upgrade PRO */}
-            <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
-              <div className="relative z-10 text-center">
-                <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
-                <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
-                <div className="flex items-baseline justify-center gap-2 mb-4">
-                  <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
-                  <span className="text-orange-200">/{proPlan?.periodo}</span>
+      {
+        user?.plano !== 'PRO' && (() => {
+          const proPlan = getPlanById('PRO');
+          return (
+            <>
+              {/* Mobile: Banner Upgrade PRO */}
+              <div className="md:hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => window.location.hash = '#/pro'}>
+                <div className="relative z-10 text-center">
+                  <h3 className="text-[20px] font-black uppercase mb-2">Atualize para {proPlan?.nome}</h3>
+                  <p className="text-orange-100 mb-4 text-[14px]">{proPlan?.descricao}</p>
+                  <div className="flex items-baseline justify-center gap-2 mb-4">
+                    <span className="text-3xl font-black">{getFormattedPrice(proPlan!)}</span>
+                    <span className="text-orange-200">/{proPlan?.periodo}</span>
+                  </div>
+                  <div className="inline-flex max-w-full items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
+                    <span className="break-words">Conhecer Plano {proPlan?.nome}</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </div>
                 </div>
-                <div className="inline-flex max-w-full items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white text-orange-600 font-black text-xs uppercase rounded-lg hover:bg-orange-50 transition-all">
-                  <span className="break-words">Conhecer Plano {proPlan?.nome}</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+              </div>
+              {/* Desktop: AdSense */}
+              <div className="hidden md:block bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
+                <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                  <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-before-chart')?.format}</span>
                 </div>
               </div>
-              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-            </div>
-            {/* Desktop: AdSense */}
-            <div className="hidden md:block bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-800">
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
-              <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-                <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-before-chart')?.format}</span>
-              </div>
-            </div>
-          </>
-        );
-      })()}
+            </>
+          );
+        })()
+      }
 
       <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
         <div className="p-4 sm:p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-3 md:gap-4">
@@ -803,61 +908,65 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {user?.plano !== 'PRO' && (
-        <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 dark:border-slate-800">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
-          <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
-            <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-after-activities')?.format}</span>
+      {
+        user?.plano !== 'PRO' && (
+          <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 dark:border-slate-800">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 text-center uppercase tracking-widest">Espaço Publicitário - Google AdSense</p>
+            <div className="mt-4 h-32 bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <span className="text-slate-400 text-sm">Anúncio {getAdSenseBlock('dashboard-after-activities')?.format}</span>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {reminderModalOpen && currentReminder && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-6">
-          <div className="w-full max-w-md bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-zoom-in border border-slate-100 dark:border-slate-800">
-            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-600 text-2xl">schedule</span>
+      {
+        reminderModalOpen && currentReminder && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-6">
+            <div className="w-full max-w-md bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-zoom-in border border-slate-100 dark:border-slate-800">
+              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined text-blue-600 text-2xl">schedule</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Lembrete de Glicemia</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Medição 2h após</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Lembrete de Glicemia</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Medição 2h após</p>
-              </div>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  <span className="font-black">{currentReminder.recordData.periodo}</span> - {currentReminder.recordData.antesRefeicao} mg/dL
-                </p>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
-                <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="500"
-                  value={aposRefeicaoValue || ''}
-                  onChange={e => {
-                    const val = Number(e.target.value);
-                    setAposRefeicaoValue(val);
-                    if (val >= 400) {
-                      alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
-                    }
-                  }}
-                  className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
-                  placeholder="0"
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleSkipReminder} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Pular</button>
-                <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
+              <div className="p-8 space-y-6">
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <span className="font-black">{currentReminder.recordData.periodo}</span> - {currentReminder.recordData.antesRefeicao} mg/dL
+                  </p>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    value={aposRefeicaoValue || ''}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      setAposRefeicaoValue(val);
+                      if (val >= 400) {
+                        alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                      }
+                    }}
+                    className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
+                    placeholder="0"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleSkipReminder} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Pular</button>
+                  <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <style>{`
         .health-marquee-track {
@@ -906,7 +1015,7 @@ const DashboardPage: React.FC = () => {
           100% { transform: translateX(-50%); }
         }
       `}</style>
-    </div>
+    </div >
   );
 };
 
