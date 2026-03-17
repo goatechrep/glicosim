@@ -128,7 +128,7 @@ const MedicationsPage: React.FC = () => {
 
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-4 min-w-0">
-        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-64 sm:h-52 md:h-40 w-full max-w-full min-w-0">
+        <div className="md:col-span-2 relative overflow-hidden rounded-2xl h-52 sm:h-48 md:h-40 w-full max-w-full min-w-0">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
@@ -199,6 +199,17 @@ const MedicationsPage: React.FC = () => {
       </div>
 
       <div className="pb-24">
+        <div className="mb-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121]">
+          <div className="border-b border-slate-100 dark:border-slate-800 px-6 py-5">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
+          </div>
+          <div className="px-6 py-8">
+            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              Nenhuma atividade recente por aqui ainda.
+            </p>
+          </div>
+        </div>
+
         {medications.length === 0 ? (
           <div className="bg-slate-50 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg p-16 text-center">
             <span className="material-symbols-outlined text-4xl text-slate-300 mb-4">medication</span>

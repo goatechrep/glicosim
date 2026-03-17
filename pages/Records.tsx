@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { mockService } from '../services/mockService';
-import { parseVoiceCommand } from '../services/geminiService';
 import { GlucoseRecord, Periodo, Medicamento } from '../types';
 import { useAuth } from '../App';
 import RecordCard from '../components/RecordCard';
@@ -20,6 +19,8 @@ interface Toast {
 }
 
 const RecordsPage: React.FC = () => {
+  const today = new Date();
+  const todayIso = today.toISOString().split('T')[0];
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const RecordsPage: React.FC = () => {
   const [showDeleteMultipleModal, setShowDeleteMultipleModal] = useState(false);
   const [medications, setMedications] = useState<any[]>([]);
   const [isClearingRecords, setIsClearingRecords] = useState(false);
+  const [clearProgress, setClearProgress] = useState({ completed: 0, total: 0 });
   const [isInsertingTestRecords, setIsInsertingTestRecords] = useState(false);
 
   const [filterPeriodo, setFilterPeriodo] = useState<string>('Todos');
@@ -43,6 +45,10 @@ const RecordsPage: React.FC = () => {
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateScope, setDateScope] = useState<'day' | 'month' | 'year'>('day');
+  const [activeTimelineDate, setActiveTimelineDate] = useState(todayIso);
+  const [visibleCount, setVisibleCount] = useState(15);
+  const [isTimelineAnimating, setIsTimelineAnimating] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   const [doseValue, setDoseValue] = useState<string>('6');
@@ -115,16 +121,111 @@ const RecordsPage: React.FC = () => {
   };
 
   const filteredRecords = useMemo(() => {
+    const activeMonth = activeTimelineDate.slice(0, 7);
+    const activeYear = activeTimelineDate.slice(0, 4);
+
     return records.filter(rec => {
       const matchPeriodo = filterPeriodo === 'Todos' || rec.periodo === filterPeriodo;
       const matchDateStart = !filterDateStart || rec.data >= filterDateStart;
       const matchDateEnd = !filterDateEnd || rec.data <= filterDateEnd;
+      const matchTimeline =
+        dateScope === 'day'
+          ? rec.data === activeTimelineDate
+          : dateScope === 'month'
+            ? rec.data.startsWith(activeMonth)
+            : rec.data.startsWith(activeYear);
       const matchSearch = !debouncedSearch || 
         rec.notes?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         rec.periodo.toLowerCase().includes(debouncedSearch.toLowerCase());
-      return matchPeriodo && matchDateStart && matchDateEnd && matchSearch;
+      return matchPeriodo && matchDateStart && matchDateEnd && matchTimeline && matchSearch;
     });
-  }, [records, filterPeriodo, filterDateStart, filterDateEnd, debouncedSearch]);
+  }, [records, filterPeriodo, filterDateStart, filterDateEnd, dateScope, activeTimelineDate, debouncedSearch]);
+
+  const displayedRecords = useMemo(
+    () => filteredRecords.slice(0, visibleCount),
+    [filteredRecords, visibleCount]
+  );
+
+  const hasMoreRecords = filteredRecords.length > displayedRecords.length;
+
+  useEffect(() => {
+    setVisibleCount(15);
+    setSelectedRecords(new Set());
+  }, [filterPeriodo, filterDateStart, filterDateEnd, dateScope, activeTimelineDate, debouncedSearch]);
+
+  useEffect(() => {
+    setIsTimelineAnimating(true);
+    const timeout = window.setTimeout(() => setIsTimelineAnimating(false), 180);
+    return () => window.clearTimeout(timeout);
+  }, [activeTimelineDate, dateScope]);
+
+  const formatDateLabel = (iso: string) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit' });
+  };
+
+  const formatMonthLabel = (iso: string) => {
+    const [year, month] = iso.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString('pt-BR', { month: 'long' });
+  };
+
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(2026, index, 1);
+      return {
+        value: String(index + 1).padStart(2, '0'),
+        label: date.toLocaleDateString('pt-BR', { month: 'long' }),
+      };
+    }),
+    []
+  );
+
+  const yearOptions = useMemo(() => {
+    const currentYear = Number(activeTimelineDate.slice(0, 4));
+    return Array.from({ length: 7 }, (_, index) => String(currentYear - 3 + index));
+  }, [activeTimelineDate]);
+
+  const shiftTimelineDate = (amount: number) => {
+    const [year, month, day] = activeTimelineDate.split('-').map(Number);
+    const nextDate = new Date(year, month - 1, day);
+
+    if (dateScope === 'day') {
+      nextDate.setDate(nextDate.getDate() + amount);
+    } else if (dateScope === 'month') {
+      nextDate.setMonth(nextDate.getMonth() + amount);
+    } else {
+      nextDate.setFullYear(nextDate.getFullYear() + amount);
+    }
+
+    setActiveTimelineDate(nextDate.toISOString().split('T')[0]);
+  };
+
+  const timelineDates = useMemo(() => {
+    const [year, month, day] = activeTimelineDate.split('-').map(Number);
+    const centerDate = new Date(year, month - 1, day);
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(centerDate);
+      date.setDate(centerDate.getDate() + index - 3);
+      return date.toISOString().split('T')[0];
+    });
+  }, [activeTimelineDate]);
+
+  const handleMonthChange = (month: string) => {
+    const [year, , day] = activeTimelineDate.split('-');
+    const nextDate = new Date(Number(year), Number(month) - 1, Number(day));
+    setActiveTimelineDate(nextDate.toISOString().split('T')[0]);
+    setDateScope('month');
+  };
+
+  const handleYearChange = (year: string) => {
+    const [, month, day] = activeTimelineDate.split('-');
+    const nextDate = new Date(Number(year), Number(month) - 1, Number(day));
+    setActiveTimelineDate(nextDate.toISOString().split('T')[0]);
+    setDateScope('year');
+  };
 
   const escapeHtml = (value: string): string => (
     value
@@ -397,6 +498,7 @@ const RecordsPage: React.FC = () => {
     e.preventDefault();
     const selectedPeriodo = formData.periodo as Periodo | undefined;
     const isSleepPeriod = selectedPeriodo === Periodo.GLICEMIA_DEITAR;
+    const isNoMedication = formData.medicamento === Medicamento.NENHUM || formData.medicamento === 'Nenhum';
 
     if (!formData.data || !selectedPeriodo) {
       addToast("Preencha data e período.", "error");
@@ -408,18 +510,13 @@ const RecordsPage: React.FC = () => {
       return;
     }
 
-    if (!isSleepPeriod && (formData.aposRefeicao == null || Number.isNaN(Number(formData.aposRefeicao)))) {
-      addToast("Campo '2h após' é obrigatório.", "error");
-      return;
-    }
-
-    if (!isSleepPeriod && !doseValue.trim()) {
+    if (!isSleepPeriod && !isNoMedication && !doseValue.trim()) {
       setDoseError("Informe a dose");
       addToast("Campo 'Dose' é obrigatório.", "error");
       return;
     }
 
-    if (!isSleepPeriod) {
+    if (!isSleepPeriod && !isNoMedication) {
       const error = validateDose(doseValue, doseUnit);
       if (error) { setDoseError(error); return; }
     }
@@ -434,7 +531,7 @@ const RecordsPage: React.FC = () => {
       return;
     }
 
-    const finalDose = isSleepPeriod ? '0 UI' : `${doseValue} ${doseUnit}`;
+    const finalDose = isSleepPeriod || isNoMedication ? '0' : `${doseValue} ${doseUnit}`;
     const dataToSave = { ...formData, periodo: selectedPeriodo, dose: finalDose };
 
     try {
@@ -500,10 +597,10 @@ const RecordsPage: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedRecords.size === filteredRecords.length) {
+    if (selectedRecords.size === displayedRecords.length) {
       setSelectedRecords(new Set());
     } else {
-      setSelectedRecords(new Set(filteredRecords.map(r => r.id)));
+      setSelectedRecords(new Set(displayedRecords.map(r => r.id)));
     }
   };
 
@@ -534,9 +631,10 @@ const RecordsPage: React.FC = () => {
 
     try {
       setIsClearingRecords(true);
-      addToast("Limpando registros...");
+      setClearProgress({ completed: 0, total: records.length });
       for (const record of records) {
         await mockService.deleteRecord(record.id);
+        setClearProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
       }
       addToast("Todos os registros foram removidos!", "success");
       setSelectedRecords(new Set());
@@ -545,6 +643,7 @@ const RecordsPage: React.FC = () => {
       addToast("Erro ao limpar registros.", "error");
     } finally {
       setIsClearingRecords(false);
+      setClearProgress({ completed: 0, total: 0 });
     }
   };
 
@@ -578,6 +677,8 @@ const RecordsPage: React.FC = () => {
     return { value: doseStr || '0', unit: 'UI' };
   };
 
+  const isNoMedication = formData.medicamento === Medicamento.NENHUM || formData.medicamento === 'Nenhum';
+
   const startVoiceCapture = async () => {
     if (!('webkitSpeechRecognition' in window)) {
       addToast("Voz não suportada", "error");
@@ -589,6 +690,7 @@ const RecordsPage: React.FC = () => {
     recognition.onend = () => setIsVoiceProcessing(false);
     recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
+      const { parseVoiceCommand } = await import('../services/geminiService');
       const parsed = await parseVoiceCommand(transcript);
       if (parsed) {
         setFormData(prev => ({
@@ -620,7 +722,7 @@ const RecordsPage: React.FC = () => {
   }, [isModalOpen, editingId]);
 
   return (
-    <div className="animate-fade-in relative min-h-full space-y-6">
+    <div className="animate-fade-in relative min-h-[720px] space-y-6">
       {/* Floating Action Button for Desktop */}
       <button
         onClick={() => {
@@ -637,16 +739,16 @@ const RecordsPage: React.FC = () => {
           setDoseUnit('UI');
           setIsModalOpen(true);
         }}
-        className="hidden md:flex fixed bottom-8 right-8 z-40 w-16 h-16 bg-orange-600 text-white rounded-full items-center justify-center border border-orange-500 active:scale-90 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+        className="hidden md:flex fixed bottom-8 right-8 z-[35] w-16 h-16 bg-orange-600 text-white rounded-full items-center justify-center border border-orange-500 active:scale-90 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
         aria-label="Adicionar novo registro"
       >
         <span className="material-symbols-outlined text-3xl font-bold">add</span>
       </button>
 
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[10999] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[90] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
           <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
             t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
@@ -658,6 +760,29 @@ const RecordsPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {isClearingRecords && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111121] px-6 py-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400">
+              <span className="material-symbols-outlined animate-spin text-[30px]">progress_activity</span>
+            </div>
+            <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white">Limpando registros</h3>
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+              Aguarde a exclusao completa do historico para fechar este aviso.
+            </p>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-red-600 transition-all duration-300"
+                style={{ width: `${clearProgress.total > 0 ? (clearProgress.completed / clearProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+            <p className="mt-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              {clearProgress.completed}/{clearProgress.total} removidos
+            </p>
+          </div>
+        </div>
+      )}
 
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4">
         <div className="space-y-1">
@@ -871,7 +996,107 @@ const RecordsPage: React.FC = () => {
         }}
       />
 
-      <div className="pb-32 md:pb-8">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121] p-4 md:p-5 space-y-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Filtro rápido</p>
+            <h3 className="mt-1 text-sm font-black uppercase text-slate-900 dark:text-white">Linha do tempo</h3>
+          </div>
+          <div className="text-center md:text-right">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">
+              {dateScope === 'day' ? 'Dia' : dateScope === 'month' ? 'Mês' : 'Ano'}
+            </p>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              {filteredRecords.length} registro(s)
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Mês</span>
+            <select
+              value={activeTimelineDate.slice(5, 7)}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-slate-200 outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20"
+            >
+              {monthOptions.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Ano</span>
+            <select
+              value={activeTimelineDate.slice(0, 4)}
+              onChange={(e) => handleYearChange(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-slate-200 outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => shiftTimelineDate(-1)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 transition-all hover:border-orange-300 hover:text-orange-600"
+            aria-label={dateScope === 'day' ? 'Dia anterior' : dateScope === 'month' ? 'Mês anterior' : 'Ano anterior'}
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+          </button>
+
+          <div className="flex-1 overflow-hidden">
+            <div className={`flex min-w-full items-center justify-center transition-all duration-200 ease-out ${isTimelineAnimating ? 'translate-y-[2px] opacity-85' : 'translate-y-0 opacity-100'}`}>
+              <div className="flex min-w-max items-center justify-center gap-2 px-1 sm:px-2">
+              {timelineDates.map((date) => {
+                const isActive = date === activeTimelineDate;
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => {
+                      setActiveTimelineDate(date);
+                      setDateScope('day');
+                    }}
+                    className={`min-w-[72px] sm:min-w-[88px] rounded-2xl border px-3 sm:px-4 py-3 text-center transition-all duration-200 ${
+                      isActive
+                        ? 'scale-[1.02] border-orange-600 bg-orange-600 text-white shadow-lg shadow-orange-500/20'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                  >
+                    <span className={`block text-[10px] font-black uppercase tracking-[0.18em] ${isActive ? 'text-orange-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short' })}
+                    </span>
+                    <span className="mt-1 block text-base sm:text-sm font-black uppercase text-center">
+                      {formatDateLabel(date)}
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => shiftTimelineDate(1)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 transition-all hover:border-orange-300 hover:text-orange-600"
+            aria-label={dateScope === 'day' ? 'Próximo dia' : dateScope === 'month' ? 'Próximo mês' : 'Próximo ano'}
+          >
+            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="pb-0 md:pb-2">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
             <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
@@ -885,7 +1110,7 @@ const RecordsPage: React.FC = () => {
           <>
             {/* Mobile: Cards */}
             <div className="md:hidden space-y-3">
-              {filteredRecords.map(rec => (
+              {displayedRecords.map(rec => (
                 <RecordCard
                   key={rec.id}
                   record={rec}
@@ -903,7 +1128,7 @@ const RecordsPage: React.FC = () => {
                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest w-10">
                       <input 
                         type="checkbox"
-                        checked={filteredRecords.length > 0 && selectedRecords.size === filteredRecords.length}
+                        checked={displayedRecords.length > 0 && selectedRecords.size === displayedRecords.length}
                         onChange={handleSelectAll}
                         className="w-5 h-5 cursor-pointer accent-orange-600"
                       />
@@ -916,7 +1141,7 @@ const RecordsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredRecords.map(rec => (
+                  {displayedRecords.map(rec => (
                     <tr key={rec.id} className={`group transition-colors ${selectedRecords.has(rec.id) ? 'bg-orange-50 dark:bg-orange-950/10' : 'hover:bg-slate-50/50 dark:hover:bg-slate-900/50'}`}>
                       <td className="px-6 py-4">
                         <input 
@@ -955,13 +1180,26 @@ const RecordsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {hasMoreRecords && (
+              <div className="my-5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((current) => current + 15)}
+                  className="inline-flex items-center gap-2 rounded-full bg-orange-600 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-white transition-all hover:bg-orange-700 shadow-lg shadow-orange-500/20"
+                >
+                  <span>Ver mais</span>
+                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
 
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-6">
-          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-lg p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-4 md:p-6">
+          <div className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-[#111121] rounded-3xl p-6 md:p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
             <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-lg flex items-center justify-center mx-auto mb-6">
               <span className="material-symbols-outlined text-4xl">warning</span>
             </div>
@@ -976,8 +1214,8 @@ const RecordsPage: React.FC = () => {
       )}
 
       {showDeleteMultipleModal && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-6">
-          <div className="w-full max-w-sm bg-white dark:bg-[#111121] rounded-lg p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-4 md:p-6">
+          <div className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-[#111121] rounded-3xl p-6 md:p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
             <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-lg flex items-center justify-center mx-auto mb-6">
               <span className="material-symbols-outlined text-4xl">warning</span>
             </div>
@@ -992,15 +1230,15 @@ const RecordsPage: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-0">
-          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-0 md:p-6">
+          <div className="flex h-full w-full max-w-full flex-col bg-white dark:bg-[#111121] rounded-none md:max-w-2xl md:h-auto md:max-h-[calc(100dvh-3rem)] md:rounded-3xl overflow-hidden animate-slide-up border-0 md:border md:border-slate-100 dark:md:border-slate-800">
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Registro</h3>
               <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-8 pb-24 md:pb-8 space-y-6 max-h-[70vh] overflow-y-auto">
+            <form id="record-form" onSubmit={handleSave} className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-8 md:px-8 md:pb-8 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
@@ -1075,7 +1313,6 @@ const RecordsPage: React.FC = () => {
                       }
                     }}
                     className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
-                    required
                     placeholder="0" 
                   />
                 </div>
@@ -1085,7 +1322,20 @@ const RecordsPage: React.FC = () => {
                 <>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</label>
-                    <select value={formData.medicamento} onChange={e => setFormData({...formData, medicamento: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                    <select
+                      value={formData.medicamento}
+                      onChange={e => {
+                        const medicamento = e.target.value as Medicamento | '';
+                        setFormData({ ...formData, medicamento });
+                        setDoseError(null);
+                        if (medicamento === Medicamento.NENHUM || medicamento === 'Nenhum') {
+                          setDoseValue('0');
+                        } else if (doseValue === '0') {
+                          setDoseValue('6');
+                        }
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none"
+                    >
                       <option value="">Selecione um medicamento</option>
                       {medications.map(med => (
                         <option key={med.id} value={med.nome}>
@@ -1104,21 +1354,25 @@ const RecordsPage: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dose</label>
-                      <input type="text" value={doseValue} onChange={e => { setDoseValue(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" placeholder="0" required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                      <select value={doseUnit} onChange={e => { setDoseUnit(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
-                        <option value="UI">UI</option>
-                        <option value="mg">mg</option>
-                        <option value="ml">ml</option>
-                      </select>
-                    </div>
-                  </div>
-                  {doseError && <p className="text-red-500 text-xs font-bold">{doseError}</p>}
+                  {!isNoMedication && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dose</label>
+                          <input type="text" value={doseValue} onChange={e => { setDoseValue(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" placeholder="0" required />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                          <select value={doseUnit} onChange={e => { setDoseUnit(e.target.value); setDoseError(null); }} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                            <option value="UI">UI</option>
+                            <option value="mg">mg</option>
+                            <option value="ml">ml</option>
+                          </select>
+                        </div>
+                      </div>
+                      {doseError && <p className="text-red-500 text-xs font-bold">{doseError}</p>}
+                    </>
+                  )}
                 </>
               )}
 
@@ -1131,12 +1385,13 @@ const RecordsPage: React.FC = () => {
                 <input type="checkbox" id="createAlert" className="w-5 h-5 accent-orange-600 cursor-pointer" />
                 <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Criar alerta para este registro</label>
               </div>
-
-              <div className="flex gap-3 pt-2 sticky bottom-0 bg-white dark:bg-[#111121] pb-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar Registro</button>
-              </div>
             </form>
+            <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111121] px-5 py-4 md:px-8 md:py-5">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
+                <button form="record-form" type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20">Salvar Registro</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

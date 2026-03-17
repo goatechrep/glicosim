@@ -13,7 +13,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[10999] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none">
       <div className={`pointer-events-auto min-w-[320px] flex items-center justify-center gap-3 px-6 py-4 rounded-xl border backdrop-blur-sm animate-zoom-in ${
         type === 'success' 
           ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' 

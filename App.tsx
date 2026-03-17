@@ -87,7 +87,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if (!mounted) return;
 
         if (session?.user) {
-          const userProfile = await supabaseService.getUser(session.user.id);
+          const userProfile = await supabaseService.ensureUserProfile(session.user.id);
           if (userProfile && mounted) {
             localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
             setUser(userProfile);
@@ -113,25 +113,22 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if (session?.user) {
           // Usuário autenticado - buscar perfil
           try {
-            const userProfile = await supabaseService.getUser(session.user.id);
-            if (!userProfile) {
-              // Perfil não existe no banco - deslogar
-              await supabaseService.signOut();
-              setUser(null);
-              setSessionExpired(true);
-            } else {
+            const userProfile = await supabaseService.ensureUserProfile(session.user.id);
+            if (userProfile) {
               localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
               setUser(userProfile);
               setSessionExpired(false);
+            } else {
+              setUser(null);
             }
           } catch (error) {
             setUser(null);
-            setSessionExpired(true);
+            setSessionExpired(false);
           }
         } else {
           // Sem sessão
           setUser(null);
-          setSessionExpired(event === 'SIGNED_OUT');
+          setSessionExpired(false);
         }
         setLoading(false);
       }
@@ -176,16 +173,18 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const refreshUser = async () => {
     const currentUser = await supabaseService.getCurrentUser();
     if (currentUser) {
-      const userProfile = await supabaseService.getUser(currentUser.id);
+      const userProfile = await supabaseService.ensureUserProfile(currentUser.id);
       if (userProfile) {
         localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
         setUser(userProfile);
+        setSessionExpired(false);
       } else {
         setUser(null);
-        setSessionExpired(true);
+        setSessionExpired(false);
       }
     } else {
       setUser(null);
+      setSessionExpired(false);
     }
   };
 
@@ -193,7 +192,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {/* Alerta de sessão expirada */}
       {sessionExpired && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[80] flex items-center justify-center">
           <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 max-w-sm animate-scale-fade-in">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -278,7 +277,7 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-white dark:bg-[#111121] text-slate-950 dark:text-slate-50 overflow-hidden flex flex-col">
 
           {isOffline && (
-            <div className="fixed top-0 left-0 right-0 w-full bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[1200] border-b border-orange-500/30">
+            <div className="fixed top-0 left-0 right-0 w-full bg-slate-900 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[60] border-b border-orange-500/30">
               <span className="material-symbols-outlined text-orange-500 animate-pulse text-[20px]">cloud_off</span>
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
                 Você está offline. <span className="text-orange-400">Os dados serão sincronizados</span> ao retornar.
@@ -287,7 +286,7 @@ const App: React.FC = () => {
           )}
 
           {showSyncSuccess && !isOffline && (
-            <div className="fixed top-0 left-0 right-0 w-full bg-emerald-600 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[1200]">
+            <div className="fixed top-0 left-0 right-0 w-full bg-emerald-600 text-white px-6 py-2.5 flex items-center justify-center gap-3 animate-slide-down z-[60]">
               <span className="material-symbols-outlined text-[20px]">sync</span>
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
                 Conexão restabelecida. <span className="opacity-80">Sincronizando dados agora...</span>
@@ -312,12 +311,12 @@ const App: React.FC = () => {
               <Route path="/*" element={
                 <PrivateRoute>
                   <div className="flex w-full h-full overflow-hidden">
-                    <div className="hidden md:block">
+                    <div className="hidden md:block md:w-72 md:shrink-0">
                       <Sidebar />
                     </div>
 
                     <div className="flex-1 flex flex-col min-w-0">
-                      <div className={`md:hidden fixed left-0 right-0 ${hasNetworkBanner ? 'top-10' : 'top-0'} flex items-center justify-between px-6 py-5 border-b border-white/40 dark:border-white/10 bg-white/35 dark:bg-slate-900/35 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] shadow-[0_8px_30px_rgba(15,23,42,0.10)] z-[1100]`}>
+                      <div className={`md:hidden fixed left-0 right-0 ${hasNetworkBanner ? 'top-10' : 'top-0'} flex items-center justify-between px-6 py-5 border-b border-white/40 dark:border-white/10 bg-white/35 dark:bg-slate-900/35 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] shadow-[0_8px_30px_rgba(15,23,42,0.10)] z-[40]`}>
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center rotate-3" aria-hidden="true">
                             <span className="material-symbols-outlined text-white text-[20px] font-bold">bloodtype</span>
@@ -331,7 +330,7 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full max-w-7xl mx-auto px-4 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-8 md:px-10 md:py-12 custom-scrollbar relative`}>
+                      <main className={`flex-1 overflow-y-auto overflow-x-hidden w-full max-w-7xl mx-auto px-4 ${hasNetworkBanner ? 'pt-32' : 'pt-24'} pb-4 md:px-10 md:pt-12 md:pb-4 custom-scrollbar relative`}>
                         <LazyPage>
                           <Routes>
                             <Route path="/" element={<DashboardPage />} />
@@ -351,7 +350,7 @@ const App: React.FC = () => {
 
                       {/* Fixed Mobile Bottom Navigation */}
                       <nav
-                        className="md:hidden fixed bottom-3 left-3 right-3 bg-white/35 dark:bg-slate-900/35 supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] z-[1000] flex items-center justify-between px-3 pt-2"
+                        className="md:hidden fixed bottom-3 left-3 right-3 bg-white/35 dark:bg-slate-900/35 supports-[backdrop-filter]:bg-white/25 dark:supports-[backdrop-filter]:bg-slate-900/25 [backdrop-filter:saturate(180%)_blur(22px)] rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] z-[35] flex items-center justify-between px-3 pt-2"
                         style={{ paddingBottom: 'max(0.65rem, env(safe-area-inset-bottom))' }}
                         aria-label="Menu de navegação principal"
                       >
@@ -364,7 +363,7 @@ const App: React.FC = () => {
                         <div className="relative w-[20%] flex justify-center">
                           <Link
                             to="/registros?new=true"
-                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[1100] shadow-lg shadow-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                            className="absolute -top-10 bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center border-4 border-white dark:border-[#111121] active:scale-90 transition-transform z-[45] shadow-lg shadow-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
                             aria-label="Adicionar novo registro"
                           >
                             <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">add</span>
@@ -405,7 +404,7 @@ const MobileNavItem = ({ to, icon, label }: { to: string, icon: string, label: s
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600 shadow-[0_0_15px_-3px_rgba(234,88,12,0.15)] bg-orange-50 dark:bg-orange-900/10' : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}`
+      `flex flex-col items-center gap-1 transition-all min-w-[44px] min-h-[44px] justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-lg ${isActive ? 'text-orange-600 shadow-[0_0_15px_-3px_rgba(234,88,12,0.15)] bg-transparent' : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}`
     }
     aria-label={label}
   >
@@ -486,7 +485,7 @@ const DashboardMobileControls: React.FC = () => {
         </button>
 
         {showRefreshPopover && (
-          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-50px] md:top-full mt-2 md:w-64 p-4 z-[1200] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-100 dark:border-blue-800 shadow-2xl animate-fade-in md:translate-x-[-20%]">
+          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-50px] md:top-full mt-2 md:w-64 p-4 z-[50] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-100 dark:border-blue-800 shadow-2xl animate-fade-in md:translate-x-[-20%]">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shrink-0">
                 <span className="material-symbols-outlined text-[18px]">info</span>
@@ -518,7 +517,7 @@ const DashboardMobileControls: React.FC = () => {
         </div>
 
         {showOfflinePopover && (
-          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-10px] md:top-full mt-2 md:w-64 p-4 z-[1200] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-100 dark:border-red-800 shadow-2xl animate-fade-in">
+          <div className="fixed inset-x-4 top-24 md:absolute md:inset-auto md:right-[-10px] md:top-full mt-2 md:w-64 p-4 z-[50] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-100 dark:border-red-800 shadow-2xl animate-fade-in">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shrink-0">
                 <span className="material-symbols-outlined text-[18px]">cloud_off</span>

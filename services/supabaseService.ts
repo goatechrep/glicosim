@@ -34,6 +34,19 @@ interface SupabaseUser {
   notifications: boolean;
 }
 
+const buildFallbackProfile = (authUser: any): UserProfile => {
+  const metadata = authUser?.user_metadata || {};
+  return {
+    id: authUser?.id || '',
+    nome: metadata.nome || metadata.name || authUser?.email?.split('@')[0] || 'Usuario',
+    email: authUser?.email || '',
+    plano: PlanoType.FREE,
+    isOnboarded: false,
+    theme: 'dark',
+    notifications: true,
+  };
+};
+
 export const supabaseService = {
   // ===== AUTH =====
   signUp: async (email: string, password: string, nome: string) => {
@@ -72,20 +85,20 @@ export const supabaseService = {
 
     // Atualizar último login
     if (data.user) {
-      const userProfile = await supabaseService.getUser(data.user.id);
-      
-
+      const userProfile = await supabaseService.ensureUserProfile(data.user.id);
       if (!userProfile) {
-        console.error('❌ Perfil não encontrado no banco');
-        await supabaseClient.auth.signOut();
-        throw new Error('Perfil do usuário não encontrado. Crie uma conta e complete o processo');
+        console.warn('Perfil não encontrado no banco; usando perfil temporário local.');
       }
 
       // Atualizar último login apenas se o perfil existir
-      await supabaseClient
+      const { error: lastLoginError } = await supabaseClient
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
+
+      if (lastLoginError) {
+        console.warn('Não foi possível atualizar o último login:', lastLoginError.message);
+      }
         
     }
     return data;
@@ -130,6 +143,54 @@ export const supabaseService = {
     }
   },
 
+  ensureUserProfile: async (userId?: string): Promise<UserProfile | null> => {
+    if (!supabaseClient) throw new Error('Supabase not configured');
+
+    let targetUserId = userId;
+    let authUser: any = null;
+
+    if (!targetUserId) {
+      const { data } = await supabaseClient.auth.getUser();
+      authUser = data.user;
+      if (!authUser) return null;
+      targetUserId = authUser.id;
+    }
+
+    let profile = await supabaseService.getUser(targetUserId);
+    if (profile) return profile;
+
+    if (!authUser || authUser.id !== targetUserId) {
+      const { data } = await supabaseClient.auth.getUser();
+      authUser = data.user;
+    }
+
+    if (!authUser || authUser.id !== targetUserId) return null;
+
+    const fallbackProfile = buildFallbackProfile(authUser);
+
+    const { error } = await supabaseClient
+      .from('users')
+      .upsert({
+        id: authUser.id,
+        email: fallbackProfile.email,
+        nome: fallbackProfile.nome,
+        plano: fallbackProfile.plano,
+        is_onboarded: fallbackProfile.isOnboarded,
+        theme: fallbackProfile.theme,
+        notifications: fallbackProfile.notifications,
+      }, {
+        onConflict: 'id'
+      });
+
+    if (error) {
+      console.error('Error ensuring user profile:', error);
+      return buildFallbackProfile(authUser);
+    }
+
+    profile = await supabaseService.getUser(targetUserId);
+    return profile || buildFallbackProfile(authUser);
+  },
+
   createUser: async (userData: Partial<UserProfile>): Promise<UserProfile> => {
     if (!supabaseClient) throw new Error('Supabase not configured');
 
@@ -139,7 +200,7 @@ export const supabaseService = {
 
     const { error } = await supabaseClient
       .from('users')
-      .insert({
+      .upsert({
         id: authUser.id,
         email: authUser.email,
         nome: userData.nome || 'Usuário',
@@ -151,6 +212,8 @@ export const supabaseService = {
         altura: userData.altura,
         biotipo: userData.biotipo,
         localizacao: userData.localizacao,
+      }, {
+        onConflict: 'id'
       });
 
     if (error) throw error;

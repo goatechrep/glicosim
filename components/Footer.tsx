@@ -1,20 +1,23 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { socialLinks } from '../data/socialLinks';
 import { appInfo } from '../data/appInfo';
+import LegalModal from './LegalModal';
+import { LegalContentType } from '../data/legalContent';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const version = 'v1.5.0';
+  const [activeLegalModal, setActiveLegalModal] = useState<LegalContentType | null>(null);
 
   return (
-    <footer className="bg-white dark:bg-[#111121] border-t border-slate-200 dark:border-slate-800 mt-16">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8">
+    <footer className="bg-white dark:bg-[#111121] border-t border-slate-200 dark:border-slate-800">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 md:py-7">
         <div className="flex flex-col lg:flex-row lg:justify-between gap-10 mb-10">
           {/* Logo e Info - Alinhamento Responsivo */}
-          <div className="flex flex-col items-center lg:items-end lg:text-right lg:order-2">
-            <div className="flex items-center gap-2.5 mb-4 lg:flex-row-reverse">
+          <div className="flex flex-col items-center md:items-left text-justify md:text-left lg:order-1">
+            <div className="flex items-center align-left gap-2.5 mb-4">
               <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-orange-500/20">
                 <span className="material-symbols-outlined text-white text-[18px]">bloodtype</span>
               </div>
@@ -22,7 +25,7 @@ const Footer: React.FC = () => {
                 Glico<span className="text-orange-600">SIM</span>
               </h3>
             </div>
-            
+
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed max-w-sm lg:max-w-xs">
               {appInfo.description}
             </p>
@@ -34,7 +37,7 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Links e Social - Grid Adaptável */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 lg:order-1 lg:flex-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 lg:order-2 lg:flex-1">
             {/* Coluna 1 */}
             <div className="text-center lg:text-left">
               <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] mb-4 opacity-50">
@@ -67,13 +70,26 @@ const Footer: React.FC = () => {
               <ul className="space-y-2.5">
                 <li>
                   <a href="#" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors">
-                    Termos
+                    LGPD
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors">
-                    Privacidade
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLegalModal('terms')}
+                    className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors"
+                  >
+                    Termos de Uso
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLegalModal('privacy')}
+                    className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors"
+                  >
+                    Política de Privacidade
+                  </button>
                 </li>
               </ul>
             </div>
@@ -95,39 +111,46 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Rodapé Final */}
-        <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 group">
-          <div className="flex flex-col items-center md:items-start gap-1">
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-500 transition-colors">
-              © {currentYear} GlicoSIM • Todos os direitos reservados.
-            </p>
-            <p className="text-[9px] font-black text-slate-400/60 uppercase tracking-widest text-center md:text-left leading-relaxed">
-              Este app não substitui consultas médicas.
-            </p>
-          </div>
+        <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-[9px] font-black text-slate-600/70 uppercase tracking-widest text-center leading-relaxed">
+            ** Este app não substitui consultas médicas. Sempre que possível, consulte o seu médico para interpretação dos resultados e orientações personalizadas. O GlicoSIM é uma ferramenta de apoio, não um diagnóstico definitivo.
+          </p>
 
-          <div className="flex flex-wrap justify-center items-center gap-6">
-            <a
-              href="https://status.goatech.com.br"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600/70 hover:text-emerald-600 transition-colors"
-            >
-              Status dos Sistemas
-            </a>
-            
-            <a
-              href={socialLinks.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 group/logo"
-            >
-              <span className="text-[9px] font-black text-slate-400/80 uppercase tracking-widest">Dev by</span>
-              <span className="text-[10px] font-black text-orange-600 transition-transform group-hover/logo:scale-105">GOATECH</span>
-            </a>
+          <div className="mt-5 border-t border-slate-100 dark:border-slate-800 pt-5">
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-3 md:items-center">
+              <p className="text-[10px] font-bold text-slate-400 text-center md:text-left">
+                © {currentYear} GlicoSIM • Todos os direitos reservados.
+              </p>
+
+              <div className="flex justify-center">
+                <a
+                  href="https://status.goatech.com.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700 transition-colors"
+                >
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
+                  Status do Serviço
+                </a>
+              </div>
+
+              <div className="flex justify-center md:justify-end">
+                <a
+                  href={socialLinks.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 group/logo"
+                >
+                  <span className="text-[9px] font-black text-slate-400/80 uppercase tracking-widest">Desenvolvido por</span>
+                  <span className="text-[10px] font-black text-orange-600 transition-transform group-hover/logo:scale-105">GOATECH</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <LegalModal type={activeLegalModal} onClose={() => setActiveLegalModal(null)} />
     </footer>
   );
 };

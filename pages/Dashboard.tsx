@@ -195,10 +195,12 @@ const DashboardPage: React.FC = () => {
   };
 
   const loadData = useCallback(async () => {
-    const s = await dataSyncService.getDashboardStats();
-    const r = await dataSyncService.getRecords();
-    const lowStock = medicationService.getLowStockMedications();
-    const reminders = reminderService.getDueReminders();
+    const [s, r, lowStock, reminders] = await Promise.all([
+      dataSyncService.getDashboardStats(),
+      dataSyncService.getRecords(),
+      Promise.resolve(medicationService.getLowStockMedications()),
+      Promise.resolve(reminderService.getDueReminders()),
+    ]);
     setStats(s);
     setRecords(r);
     setLowStockMeds(lowStock);
@@ -556,7 +558,7 @@ const DashboardPage: React.FC = () => {
       {/* Banner de Avisos / Propaganda em Slide */}
       <div className="grid md:grid-cols-3 gap-3 md:gap-4 min-w-0">
         <div className="md:col-span-2 space-y-3 min-w-0">
-          <div className="relative overflow-hidden rounded-2xl h-72 sm:h-64 md:h-44 w-full max-w-full min-w-0">
+          <div className="relative overflow-hidden rounded-2xl h-56 sm:h-60 md:h-44 w-full max-w-full min-w-0">
             {banners.map((banner, index) => (
               <div
                 key={banner.id}
@@ -973,7 +975,7 @@ const DashboardPage: React.FC = () => {
           display: flex;
           width: max-content;
           min-width: 100%;
-          animation: health-marquee 26s linear infinite;
+          animation: health-marquee 18s linear infinite;
           will-change: transform;
         }
         .health-marquee-row {

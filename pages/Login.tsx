@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { supabaseService } from '../services/supabaseService';
+import LegalModal from '../components/LegalModal';
+import { LegalContentType } from '../data/legalContent';
 
 type PasswordStrength = 'fraco' | 'medio' | 'forte' | 'muito-forte';
 
@@ -22,6 +24,7 @@ const LoginPage: React.FC = () => {
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [forgotCooldown, setForgotCooldown] = useState(0);
+  const [activeLegalModal, setActiveLegalModal] = useState<LegalContentType | null>(null);
   const navigate = useNavigate();
   const { login, refreshUser } = useAuth();
 
@@ -35,13 +38,6 @@ const LoginPage: React.FC = () => {
       }
     }
   }, [user, loading, navigate]);
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#111121] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   const validateEmail = (email: string): boolean => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -98,6 +94,14 @@ const LoginPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [forgotCooldown]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#111121] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,7 +205,7 @@ const LoginPage: React.FC = () => {
               <span className="material-symbols-outlined text-white text-4xl">bloodtype</span>
            </div>
            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Glico<span className="text-orange-600">SIM</span></h1>
-           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle sua glicemia todo dia de forma prática e rápida. SIMples assim!</p>
+           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Controle sua glicemia todo dia de forma prática e rápida. <br />SIMples assim!</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-lg overflow-hidden">
@@ -344,10 +348,27 @@ const LoginPage: React.FC = () => {
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-6">
-          Leia nossos <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Termos de Uso</span> e <span className="text-slate-600 dark:text-slate-300 underline cursor-pointer">Política de Privacidade</span>.
+          Leia nossos{' '}
+          <button
+            type="button"
+            onClick={() => setActiveLegalModal('terms')}
+            className="text-slate-600 dark:text-slate-300 underline cursor-pointer"
+          >
+            Termos de Uso
+          </button>{' '}
+          e{' '}
+          <button
+            type="button"
+            onClick={() => setActiveLegalModal('privacy')}
+            className="text-slate-600 dark:text-slate-300 underline cursor-pointer"
+          >
+            Política de Privacidade
+          </button>.
         </p>
         </div>
       </div>
+
+      <LegalModal type={activeLegalModal} onClose={() => setActiveLegalModal(null)} />
 
       {/* Modal Esqueceu Senha */}
       {showForgotModal && (

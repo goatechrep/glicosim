@@ -64,6 +64,7 @@ const GUIDE_STEPS: Record<'android' | 'ios', InstallStep[]> = {
 const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [open, setOpen] = useState(false);
   const [hidePermanently, setHidePermanently] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<'android' | 'ios'>('android');
@@ -76,6 +77,16 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
   );
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+
+    updateIsMobile();
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateIsMobile);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(updateIsMobile);
+    }
+
     const hidden = localStorage.getItem(DISMISS_KEY) === '1';
     setHidePermanently(hidden);
 
@@ -94,6 +105,11 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
 
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt as EventListener);
     return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updateIsMobile);
+      } else if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(updateIsMobile);
+      }
       window.removeEventListener('appinstalled', updateStandalone);
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt as EventListener);
     };
@@ -105,7 +121,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
     setCurrentStep(0);
   }, [open, isIOS]);
 
-  if (isStandalone || hidePermanently) return null;
+  if (isStandalone || hidePermanently || !isMobile) return null;
 
   const closeModal = () => setOpen(false);
 
@@ -160,7 +176,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
       ) : (
         <button
           onClick={() => setOpen(true)}
-          className="fixed right-4 md:right-6 bottom-24 md:bottom-6 z-[1200] flex items-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-full shadow-xl border border-orange-500 active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+          className="fixed right-4 bottom-24 z-[45] flex items-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-full shadow-xl border border-orange-500 active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
           aria-label="Instalar aplicativo no celular"
         >
           <span className="material-symbols-outlined text-[18px]">install_mobile</span>
@@ -169,8 +185,8 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
       )}
 
       {open && (
-        <div className="fixed inset-0 z-[1300] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="w-full h-[100dvh] md:h-auto md:max-h-[92vh] md:max-w-xl bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-none md:rounded-2xl overflow-hidden animate-slide-up flex flex-col">
+        <div className="fixed inset-0 z-[80] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
+          <div className="w-full max-w-xl max-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-3rem)] bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden animate-slide-up flex flex-col">
             <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">Instalar GlicoSIM</h3>
               <button
@@ -182,7 +198,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div className="p-5 md:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Instale o app na tela inicial para abrir mais rapido e usar com experiencia nativa.
               </p>
@@ -282,7 +298,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
               </div>
             </div>
 
-            <div className="px-6 pt-3 pb-12 md:pb-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+            <div className="px-5 md:px-6 pt-3 pb-5 md:pb-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
               <button
                 onClick={closeModal}
                 className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-widest"
