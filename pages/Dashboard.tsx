@@ -821,46 +821,48 @@ const DashboardPage: React.FC = () => {
         )
       }
 
-      <BaseModal
-        isOpen={reminderModalOpen && Boolean(currentReminder)}
-        onClose={handleSkipReminder}
-        panelClassName="max-w-md rounded-lg"
-        bodyClassName="p-8"
-        title={<span className="uppercase">Lembrete de Glicemia</span>}
-        subtitle="Medição 2h após"
-      >
-              <div className="space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    <span className="font-black">{currentReminder.recordData.periodo}</span> - {currentReminder.recordData.antesRefeicao} mg/dL
-                  </p>
-                </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="500"
-                    value={aposRefeicaoValue || ''}
-                    onChange={e => {
-                      const val = Number(e.target.value);
-                      setAposRefeicaoValue(val);
-                      if (val >= 400) {
-                        alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
-                      }
-                    }}
-                    className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
-                    placeholder="0"
-                    autoFocus
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={handleSkipReminder} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Pular</button>
-                  <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
-                </div>
-              </div>
-      </BaseModal>
+      {currentReminder && (
+        <BaseModal
+          isOpen={reminderModalOpen}
+          onClose={handleSkipReminder}
+          panelClassName="max-w-md rounded-lg"
+          bodyClassName="p-8"
+          title={<span className="uppercase">Lembrete de Glicemia</span>}
+          subtitle="Medição 2h após"
+        >
+          <div className="space-y-6">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                <span className="font-black">{currentReminder.recordData.periodo}</span> - {currentReminder.recordData.antesRefeicao} mg/dL
+              </p>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+              <label className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.3em] mb-3 block">Glicemia 2h Após (mg/dL)</label>
+              <input
+                type="number"
+                min="0"
+                max="500"
+                value={aposRefeicaoValue || ''}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  setAposRefeicaoValue(val);
+                  if (val >= 400) {
+                    alert('⚠️ ATENÇÃO: Glicemia muito alta!\n\n💉 Lave bem as mãos e refaça o teste\n🏥 Se confirmar, procure ajuda médica\n\n🚨 Emergência:\n• Ambulância: 192\n• Resgate: 193');
+                  }
+                }}
+                className="w-full text-center text-5xl font-black bg-transparent border-none outline-none text-blue-600"
+                placeholder="0"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleSkipReminder} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[12px] uppercase rounded-xl">Pular</button>
+              <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
+            </div>
+          </div>
+        </BaseModal>
+      )}
 
       <style>{`
         .health-marquee-track {

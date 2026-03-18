@@ -419,52 +419,54 @@ const MedicationsPage: React.FC = () => {
             </form>
       </BaseModal>
 
-      <BaseModal
-        isOpen={isStockModalOpen && Boolean(stockTarget)}
-        onClose={() => {
-          setIsStockModalOpen(false);
-          setStockTarget(null);
-          setStockAmount('');
-        }}
-        overlayClassName="z-[3100]"
-        panelClassName="max-w-md rounded-[28px]"
-        bodyClassName="p-6"
-        eyebrow="Entrada rapida"
-        title="Adicionar estoque"
-        subtitle={stockTarget ? `${stockTarget.nome} (${stockTarget.unidade})` : undefined}
-      >
-            <form onSubmit={handleQuickStockEntry} className="space-y-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantidade a adicionar</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={stockAmount}
-                  onChange={(e) => setStockAmount(e.target.value)}
-                  placeholder={`Ex: 10 ${stockTarget.unidade}`}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                  required
-                />
-              </div>
+      {stockTarget && (
+        <BaseModal
+          isOpen={isStockModalOpen}
+          onClose={() => {
+            setIsStockModalOpen(false);
+            setStockTarget(null);
+            setStockAmount('');
+          }}
+          overlayClassName="z-[3100]"
+          panelClassName="max-w-md rounded-[28px]"
+          bodyClassName="p-6"
+          eyebrow="Entrada rapida"
+          title="Adicionar estoque"
+          subtitle={`${stockTarget.nome} (${stockTarget.unidade})`}
+        >
+          <form onSubmit={handleQuickStockEntry} className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantidade a adicionar</label>
+              <input
+                type="number"
+                min="1"
+                value={stockAmount}
+                onChange={(e) => setStockAmount(e.target.value)}
+                placeholder={`Ex: 10 ${stockTarget.unidade}`}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                required
+              />
+            </div>
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsStockModalOpen(false);
-                    setStockTarget(null);
-                    setStockAmount('');
-                  }}
-                  className="flex-1 rounded-2xl border-2 border-slate-200 bg-slate-100 py-3.5 text-[12px] font-black uppercase text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="flex-1 rounded-2xl bg-blue-600 py-3.5 text-[12px] font-black uppercase text-white transition-all hover:bg-blue-700">
-                  Inserir
-                </button>
-              </div>
-            </form>
-      </BaseModal>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStockModalOpen(false);
+                  setStockTarget(null);
+                  setStockAmount('');
+                }}
+                className="flex-1 rounded-2xl border-2 border-slate-200 bg-slate-100 py-3.5 text-[12px] font-black uppercase text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="flex-1 rounded-2xl bg-blue-600 py-3.5 text-[12px] font-black uppercase text-white transition-all hover:bg-blue-700">
+                Inserir
+              </button>
+            </div>
+          </form>
+        </BaseModal>
+      )}
 
       <style>{`
         @keyframes toast-in { 0% { opacity: 0; transform: scale(0.6) translateY(50px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
