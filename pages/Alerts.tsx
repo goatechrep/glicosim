@@ -67,7 +67,7 @@ const AlertsPage: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-in space-y-6 mb-10">
       {toasts.length > 0 && (
         <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
@@ -97,7 +97,7 @@ const AlertsPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 mb-10 max-w-7xl">
+      <div className="grid grid-cols-1 gap-4 max-w-7xl">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-48">
              <div className="w-8 h-8 border-3 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
