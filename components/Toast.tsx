@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ToastProps {
   message: string;
@@ -42,18 +43,18 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 4000 }
 
   const style = styles[type];
 
-  return (
+  return createPortal(
     <>
       {/* Overlay opaco */}
       <div 
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[2000] animate-fade-in"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[3400] animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
       
       {/* Toast centralizado */}
       <div className={`
-        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2010]
+        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[3410]
         flex flex-col items-center justify-center gap-6
         px-8 py-7 min-w-[320px] max-w-md
         rounded-2xl border-2
@@ -81,7 +82,8 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 4000 }
           OK
         </button>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

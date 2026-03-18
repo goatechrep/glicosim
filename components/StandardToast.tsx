@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ToastProps {
   message: string;
@@ -12,8 +13,8 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none">
+  return createPortal(
+    <div className="fixed inset-0 z-[3400] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-fade-in pointer-events-none">
       <div className={`pointer-events-auto min-w-[320px] flex items-center justify-center gap-3 px-6 py-4 rounded-xl border backdrop-blur-sm animate-zoom-in ${
         type === 'success' 
           ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' 
@@ -24,7 +25,8 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
         </span>
         <span className="text-sm font-bold uppercase tracking-widest">{message}</span>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

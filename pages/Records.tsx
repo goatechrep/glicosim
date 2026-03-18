@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { mockService } from '../services/mockService';
 import { GlucoseRecord, Periodo, Medicamento } from '../types';
@@ -775,7 +776,7 @@ const RecordsPage: React.FC = () => {
   }, [isModalOpen, editingId]);
 
   return (
-    <div className="animate-fade-in relative min-h-[720px] space-y-6">
+    <div className="animate-fade-in relative min-h-[720px] mb-10 space-y-6">
       {/* Floating Action Button for Desktop */}
       <button
         onClick={() => {
@@ -798,21 +799,24 @@ const RecordsPage: React.FC = () => {
         <span className="material-symbols-outlined text-3xl font-bold">add</span>
       </button>
 
-      {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
-      )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
-        {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
-            t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
-            t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
-            'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
-          }`}>
-            <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
-            <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+      {toasts.length > 0 && createPortal(
+        <>
+          <div className="fixed inset-0 z-[3400] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+          <div className="fixed top-1/2 left-1/2 z-[3410] flex -translate-x-1/2 -translate-y-1/2 pointer-events-none flex-col items-center justify-center gap-3">
+            {toasts.map(t => (
+              <div key={t.id} className={`pointer-events-auto flex min-w-[280px] flex-col items-center gap-3 rounded-2xl border-2 px-8 py-6 text-center shadow-2xl backdrop-blur-sm animate-toast-in ${
+                t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
+                t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
+                'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
+              }`}>
+                <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
+                <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>,
+        document.body
+      )}
 
       {isClearingRecords && (
         <div className="fixed inset-0 z-[2050] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">

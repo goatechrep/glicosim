@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { mockService } from '../services/mockService';
 import { Alert } from '../types';
-import { notificationService } from '../services/notificationService';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Toast {
   message: string;
@@ -14,6 +15,8 @@ const AlertsPage: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Alert | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     loadAlerts();
@@ -32,18 +35,22 @@ const AlertsPage: React.FC = () => {
   };
 
   const handleClearAll = async () => {
-    if (confirm('Deseja limpar todos os alertas?')) {
-      for (const alert of alerts) {
-        await mockService.deleteAlert(alert.id);
-      }
-      addToast('Todos os alertas foram removidos!');
-      await loadAlerts();
+    for (const alert of alerts) {
+      await mockService.deleteAlert(alert.id);
     }
+    addToast('Todas as notificações foram removidas!');
+    setShowClearConfirm(false);
+    await loadAlerts();
   };
 
-  const handleDelete = async (id: string) => {
-    await mockService.deleteAlert(id);
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    await mockService.deleteAlert(deleteTarget.id);
     addToast('Alerta removido!');
+    setDeleteTarget(null);
     await loadAlerts();
   };
 
@@ -68,21 +75,24 @@ const AlertsPage: React.FC = () => {
 
   return (
     <div className="animate-fade-in space-y-6 mb-10">
-      {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
-      )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
-        {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
-            t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
-            t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
-            'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
-          }`}>
-            <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
-            <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+      {toasts.length > 0 && createPortal(
+        <>
+          <div className="fixed inset-0 z-[3400] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+          <div className="fixed top-1/2 left-1/2 z-[3410] flex -translate-x-1/2 -translate-y-1/2 pointer-events-none flex-col items-center justify-center gap-3">
+            {toasts.map(t => (
+              <div key={t.id} className={`pointer-events-auto flex min-w-[280px] flex-col items-center gap-3 rounded-2xl border-2 px-8 py-6 text-center shadow-2xl backdrop-blur-sm animate-toast-in ${
+                t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
+                t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
+                'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
+              }`}>
+                <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
+                <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>,
+        document.body
+      )}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800/80">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-orange-600 dark:text-white uppercase leading-none">Notificações</h2>
@@ -91,7 +101,7 @@ const AlertsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleClearAll} className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-5 py-2.5 border-2 border-orange-100 dark:border-orange-900/30 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all active:scale-95">
+          <button onClick={() => setShowClearConfirm(true)} className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-5 py-2.5 border-2 border-orange-100 dark:border-orange-900/30 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all active:scale-95">
             Limpar notificações
           </button>
         </div>
@@ -119,7 +129,7 @@ const AlertsPage: React.FC = () => {
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight">{alert.title}</h3>
                 <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest shrink-0">
-                  <button onClick={() => handleDelete(alert.id)} className="px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-all">Excluir</button>
+                  <button onClick={() => setDeleteTarget(alert)} className="px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-all">Excluir</button>
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal font-medium pr-4">{alert.description}</p>
@@ -150,6 +160,25 @@ const AlertsPage: React.FC = () => {
         @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
       `}</style>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Excluir notificação?"
+        description={deleteTarget ? `${deleteTarget.title} será removida da sua central de avisos.` : 'Esta ação não pode ser desfeita.'}
+        confirmLabel="Excluir permanente"
+      />
+
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearAll}
+        title="Limpar notificações?"
+        description="Todas as notificações atuais serão removidas da lista."
+        confirmLabel="Limpar agora"
+        tone="warning"
+      />
     </div>
   );
 };

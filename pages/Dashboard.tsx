@@ -351,6 +351,13 @@ const DashboardPage: React.FC = () => {
     return `Período carregado: ${formatDateBR(first)} até ${formatDateBR(last)} • ${chartData.length}/${selectedDays} dias com dados`;
   }, [chartData, period, periodOptions]);
 
+  const pendingAlerts = useMemo(
+    () => (stats?.alerts || []).filter((alert: any) =>
+      alert.severity === 'high' && (alert.deliveryStatus || 'scheduled') !== 'sent'
+    ),
+    [stats?.alerts]
+  );
+
   if (loading) return (
     <div className="flex flex-col gap-8">
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -538,7 +545,7 @@ const DashboardPage: React.FC = () => {
       }
 
       {
-        stats.alerts && stats.alerts.length > 0 && (
+        pendingAlerts.length > 0 && (
           <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
               <div className="flex items-center gap-2">
@@ -547,7 +554,7 @@ const DashboardPage: React.FC = () => {
               </div>
               <NavLink to="/alertas" className="text-xs font-bold text-red-700 dark:text-red-400 hover:underline">Ver Todos</NavLink>
             </div>
-            <p className="text-sm font-bold text-red-700 dark:text-red-400">{stats.alerts.length} alerta(s) requer(em) sua atenção</p>
+            <p className="text-sm font-bold text-red-700 dark:text-red-400">{pendingAlerts.length} alerta(s) requer(em) sua atenção</p>
           </div>
         )
       }

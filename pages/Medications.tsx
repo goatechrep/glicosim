@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { medicationService } from '../services/medicationService';
 import { Medication } from '../types/medication';
 import { getPlanById, getFormattedPrice } from '../data/plans';
 import { getBannersForPage } from '../data/banners';
 import { useAuth } from '../App';
 import BaseModal from '../components/BaseModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { activityService, ActivityItem } from '../services/activityService';
 
 interface Toast {
@@ -25,6 +27,7 @@ const MedicationsPage: React.FC = () => {
   const [stockTarget, setStockTarget] = useState<Medication | null>(null);
   const [stockAmount, setStockAmount] = useState('');
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Medication | null>(null);
   const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
     nome: '',
@@ -110,12 +113,19 @@ const MedicationsPage: React.FC = () => {
     loadMedications();
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Deseja excluir este medicamento?')) {
-      medicationService.deleteMedication(id);
-      addToast('Medicamento removido!');
-      loadMedications();
+  const handleDelete = (medication: Medication) => {
+    setDeleteTarget(medication);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) {
+      return;
     }
+
+    medicationService.deleteMedication(deleteTarget.id);
+    addToast('Medicamento removido!');
+    setDeleteTarget(null);
+    loadMedications();
   };
 
   const lowStockMeds = medicationService.getLowStockMedications();
@@ -133,21 +143,24 @@ const MedicationsPage: React.FC = () => {
         <span className="material-symbols-outlined text-3xl">pill</span>
       </button>
 
-      {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
-      )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
-        {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
-            t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
-            t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
-            'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
-          }`}>
-            <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
-            <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+      {toasts.length > 0 && createPortal(
+        <>
+          <div className="fixed inset-0 z-[3400] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+          <div className="fixed top-1/2 left-1/2 z-[3410] flex -translate-x-1/2 -translate-y-1/2 pointer-events-none flex-col items-center justify-center gap-3">
+            {toasts.map(t => (
+              <div key={t.id} className={`pointer-events-auto flex min-w-[280px] flex-col items-center gap-3 rounded-2xl border-2 px-8 py-6 text-center shadow-2xl backdrop-blur-sm animate-toast-in ${
+                t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
+                t.type === 'error' ? 'bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white' : 
+                'bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-700 text-white'
+              }`}>
+                <span className="material-symbols-outlined text-5xl font-bold">{t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info'}</span>
+                <span className="text-sm font-black uppercase tracking-wider">{t.message}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>,
+        document.body
+      )}
 
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4">
         <div className="space-y-1">
@@ -324,7 +337,7 @@ const MedicationsPage: React.FC = () => {
                       <span className="material-symbols-outlined text-[18px]">add_circle</span>
                     </button>
                     <button
-                      onClick={() => handleDelete(med.id)}
+                      onClick={() => handleDelete(med)}
                       className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                     >
                       <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -467,6 +480,15 @@ const MedicationsPage: React.FC = () => {
           </form>
         </BaseModal>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir medicamento?"
+        description={deleteTarget ? `${deleteTarget.nome} será removido do estoque.` : 'Esta ação não pode ser desfeita.'}
+        confirmLabel="Excluir permanente"
+      />
 
       <style>{`
         @keyframes toast-in { 0% { opacity: 0; transform: scale(0.6) translateY(50px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
