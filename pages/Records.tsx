@@ -8,6 +8,8 @@ import RecordCard from '../components/RecordCard';
 import FilterDrawer from '../components/FilterDrawer';
 import useDebounce from '../hooks/useDebounce';
 import Button from '../components/Button';
+import BaseModal from '../components/BaseModal';
+import { activityService } from '../services/activityService';
 import { medicationService } from '../services/medicationService';
 import { reminderService } from '../services/reminderService';
 import { settingsService } from '../services/settingsService';
@@ -57,10 +59,10 @@ const RecordsPage: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<GlucoseRecord>>({
     periodo: Periodo.CAFE_MANHA,
-    medicamento: Medicamento.HUMALOG,
+    medicamento: '' as Medicamento | '',
     antesRefeicao: 0,
     aposRefeicao: 0,
-    dose: '6 UI',
+    dose: '0',
     notes: '',
     data: new Date().toISOString().split('T')[0]
   });
@@ -81,9 +83,9 @@ const RecordsPage: React.FC = () => {
       setEditingId(null);
       setFormData({
         periodo: Periodo.CAFE_MANHA,
-        medicamento: Medicamento.HUMALOG,
+        medicamento: '' as Medicamento | '',
         antesRefeicao: 100,
-        dose: '6 UI',
+        dose: '0',
         notes: '',
         data: new Date().toISOString().split('T')[0]
       });
@@ -499,6 +501,7 @@ const RecordsPage: React.FC = () => {
     const selectedPeriodo = formData.periodo as Periodo | undefined;
     const isSleepPeriod = selectedPeriodo === Periodo.GLICEMIA_DEITAR;
     const isNoMedication = formData.medicamento === Medicamento.NENHUM || formData.medicamento === 'Nenhum';
+    const hasSelectedMedication = Boolean(formData.medicamento) && !isNoMedication;
 
     if (!formData.data || !selectedPeriodo) {
       addToast("Preencha data e período.", "error");
@@ -510,13 +513,13 @@ const RecordsPage: React.FC = () => {
       return;
     }
 
-    if (!isSleepPeriod && !isNoMedication && !doseValue.trim()) {
+    if (!isSleepPeriod && hasSelectedMedication && !doseValue.trim()) {
       setDoseError("Informe a dose");
       addToast("Campo 'Dose' é obrigatório.", "error");
       return;
     }
 
-    if (!isSleepPeriod && !isNoMedication) {
+    if (!isSleepPeriod && hasSelectedMedication) {
       const error = validateDose(doseValue, doseUnit);
       if (error) { setDoseError(error); return; }
     }
@@ -531,17 +534,33 @@ const RecordsPage: React.FC = () => {
       return;
     }
 
-    const finalDose = isSleepPeriod || isNoMedication ? '0' : `${doseValue} ${doseUnit}`;
+    const finalDose = isSleepPeriod || isNoMedication || !hasSelectedMedication ? '0' : `${doseValue} ${doseUnit}`;
     const dataToSave = { ...formData, periodo: selectedPeriodo, dose: finalDose };
 
     try {
       let savedRecordId = editingId;
       if (editingId) {
         await mockService.updateRecord(editingId, dataToSave);
+        activityService.logActivity({
+          title: 'Registro atualizado',
+          description: `${selectedPeriodo} em ${formData.data} foi ajustado para ${formData.antesRefeicao} mg/dL.`,
+          icon: 'edit_note',
+          accent: 'orange',
+          category: 'record',
+          metadata: { recordId: editingId },
+        });
         addToast("Registro atualizado!");
       } else {
         const newRecord = await mockService.createRecord(dataToSave as any);
         savedRecordId = newRecord.id;
+        activityService.logActivity({
+          title: 'Registro criado',
+          description: `${selectedPeriodo} salvo com ${formData.antesRefeicao} mg/dL em ${formData.data}.`,
+          icon: 'water_drop',
+          accent: 'orange',
+          category: 'record',
+          metadata: { recordId: newRecord.id },
+        });
         addToast("Medição salva com sucesso!");
       }
       
@@ -576,6 +595,14 @@ const RecordsPage: React.FC = () => {
     if (recordToDelete) {
       try {
         await mockService.deleteRecord(recordToDelete);
+        activityService.logActivity({
+          title: 'Registro removido',
+          description: 'Um registro de glicemia foi apagado manualmente.',
+          icon: 'delete',
+          accent: 'red',
+          category: 'record',
+          metadata: { recordId: recordToDelete },
+        });
         addToast("Registro removido com sucesso!", "success");
         setIsDeleteModalOpen(false);
         setRecordToDelete(null);
@@ -611,9 +638,18 @@ const RecordsPage: React.FC = () => {
     }
 
     try {
+      const deletedCount = selectedRecords.size;
       for (const id of selectedRecords) {
         await mockService.deleteRecord(id);
       }
+      activityService.logActivity({
+        title: 'Registros excluídos em lote',
+        description: `${deletedCount} registros de glicemia foram removidos de uma vez.`,
+        icon: 'delete_sweep',
+        accent: 'red',
+        category: 'record',
+        metadata: { count: deletedCount },
+      });
       addToast(`${selectedRecords.size} registros removidos!`, "success");
       setShowDeleteMultipleModal(false);
       setSelectedRecords(new Set());
@@ -636,6 +672,14 @@ const RecordsPage: React.FC = () => {
         await mockService.deleteRecord(record.id);
         setClearProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
       }
+      activityService.logActivity({
+        title: 'Histórico limpo',
+        description: 'Todos os registros de glicemia foram removidos da conta.',
+        icon: 'history_toggle_off',
+        accent: 'red',
+        category: 'record',
+        metadata: { count: records.length },
+      });
       addToast("Todos os registros foram removidos!", "success");
       setSelectedRecords(new Set());
       await loadRecords();
@@ -652,6 +696,14 @@ const RecordsPage: React.FC = () => {
       setIsInsertingTestRecords(true);
       addToast("Inserindo dados de teste...");
       const inserted = await mockService.addTestRecords();
+      activityService.logActivity({
+        title: 'Dados de teste inseridos',
+        description: `${inserted} registros de exemplo foram adicionados ao histórico.`,
+        icon: 'science',
+        accent: 'violet',
+        category: 'system',
+        metadata: { count: inserted },
+      });
       addToast(`${inserted} registros de teste inseridos!`, "success");
       await loadRecords();
     } catch (error) {
@@ -678,6 +730,7 @@ const RecordsPage: React.FC = () => {
   };
 
   const isNoMedication = formData.medicamento === Medicamento.NENHUM || formData.medicamento === 'Nenhum';
+  const hasSelectedMedication = Boolean(formData.medicamento) && !isNoMedication;
 
   const startVoiceCapture = async () => {
     if (!('webkitSpeechRecognition' in window)) {
@@ -729,9 +782,9 @@ const RecordsPage: React.FC = () => {
           setEditingId(null);
           setFormData({
             periodo: Periodo.CAFE_MANHA,
-            medicamento: Medicamento.HUMALOG,
+            medicamento: '' as Medicamento | '',
             antesRefeicao: 100,
-            dose: '6 UI',
+            dose: '0',
             notes: '',
             data: new Date().toISOString().split('T')[0]
           });
@@ -746,9 +799,9 @@ const RecordsPage: React.FC = () => {
       </button>
 
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[90] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] pointer-events-none flex flex-col items-center justify-center gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
           <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
             t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
@@ -762,7 +815,7 @@ const RecordsPage: React.FC = () => {
       </div>
 
       {isClearingRecords && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[2050] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
           <div className="w-full max-w-sm rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111121] px-6 py-7 text-center shadow-2xl">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400">
               <span className="material-symbols-outlined animate-spin text-[30px]">progress_activity</span>
@@ -1197,48 +1250,66 @@ const RecordsPage: React.FC = () => {
         )}
       </div>
 
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-4 md:p-6">
-          <div className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-[#111121] rounded-3xl p-6 md:p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
-            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-lg flex items-center justify-center mx-auto mb-6">
-              <span className="material-symbols-outlined text-4xl">warning</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Apagar Registro?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
-            <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleConfirmDelete} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all">Excluir Permanente</button>
-              <button onClick={() => setIsDeleteModalOpen(false)} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Manter Registro</button>
-            </div>
+      <BaseModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        panelClassName="max-w-sm max-h-[calc(100dvh-2rem)] text-center"
+        bodyClassName="overflow-y-auto px-6 pb-10 pt-6 md:px-10"
+        overlayClassName="bg-slate-950/90 backdrop-blur-2xl p-4 md:p-6"
+        title={<span className="uppercase">Apagar Registro?</span>}
+        subtitle="Esta ação não pode ser desfeita."
+      >
+        <div className="space-y-8">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-950/20">
+            <span className="material-symbols-outlined text-4xl">warning</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button onClick={handleConfirmDelete} className="w-full rounded-lg bg-red-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-red-700">Excluir Permanente</button>
+            <button onClick={() => setIsDeleteModalOpen(false)} className="w-full rounded-lg border-2 border-slate-200 bg-slate-100 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Manter Registro</button>
           </div>
         </div>
-      )}
+      </BaseModal>
 
-      {showDeleteMultipleModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl animate-fade-in p-4 md:p-6">
-          <div className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-[#111121] rounded-3xl p-6 md:p-10 text-center animate-zoom-in border border-slate-100 dark:border-slate-800">
-            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-lg flex items-center justify-center mx-auto mb-6">
-              <span className="material-symbols-outlined text-4xl">warning</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase">Deletar {selectedRecords.size} Registros?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação não pode ser desfeita.</p>
-            <div className="flex flex-col gap-3 mt-8">
-              <button onClick={handleDeleteMultiple} className="w-full py-3 bg-red-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all">Excluir Permanente</button>
-              <button onClick={() => setShowDeleteMultipleModal(false)} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
-            </div>
+      <BaseModal
+        isOpen={showDeleteMultipleModal}
+        onClose={() => setShowDeleteMultipleModal(false)}
+        panelClassName="max-w-sm max-h-[calc(100dvh-2rem)] text-center"
+        bodyClassName="overflow-y-auto px-6 pb-10 pt-6 md:px-10"
+        overlayClassName="bg-slate-950/90 backdrop-blur-2xl p-4 md:p-6"
+        title={<span className="uppercase">Deletar {selectedRecords.size} Registros?</span>}
+        subtitle="Esta ação não pode ser desfeita."
+      >
+        <div className="space-y-8">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-950/20">
+            <span className="material-symbols-outlined text-4xl">warning</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button onClick={handleDeleteMultiple} className="w-full rounded-lg bg-red-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-red-700">Excluir Permanente</button>
+            <button onClick={() => setShowDeleteMultipleModal(false)} className="w-full rounded-lg border-2 border-slate-200 bg-slate-100 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Cancelar</button>
           </div>
         </div>
-      )}
+      </BaseModal>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-0 md:p-6">
-          <div className="flex h-full w-full max-w-full flex-col bg-white dark:bg-[#111121] rounded-none md:max-w-2xl md:h-auto md:max-h-[calc(100dvh-3rem)] md:rounded-3xl overflow-hidden animate-slide-up border-0 md:border md:border-slate-100 dark:md:border-slate-800">
-            <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Registro</h3>
-              <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-            <form id="record-form" onSubmit={handleSave} className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-8 md:px-8 md:pb-8 space-y-6">
+      <BaseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        overlayClassName="z-[3200] isolate items-end md:items-center p-0 md:p-6 bg-slate-950/92 backdrop-blur-xl"
+        panelClassName="h-[100dvh] max-w-full rounded-none border-0 shadow-[0_32px_120px_rgba(15,23,42,0.42)] md:h-auto md:max-h-[calc(100dvh-2.5rem)] md:max-w-3xl md:rounded-[32px] md:border md:border-slate-200/70 dark:md:border-slate-800"
+        headerClassName="shrink-0 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur md:px-8 md:py-5 dark:border-slate-800 dark:bg-[#111121]/95"
+        bodyClassName="flex-1 min-h-0 overflow-y-auto px-5 pb-24 pt-5 md:px-8 md:pb-8 md:pt-6"
+        footerClassName="shrink-0 border-t border-slate-200/80 bg-white/96 px-5 py-4 backdrop-blur md:px-8 md:py-5 dark:border-slate-800 dark:bg-[#111121]/96"
+        footer={
+          <div className="flex gap-3" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 rounded-2xl border-2 border-slate-200 bg-slate-100 py-4 text-[12px] font-black uppercase text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Cancelar</button>
+            <button form="record-form" type="submit" className="flex-1 rounded-2xl bg-orange-600 py-4 text-[12px] font-black uppercase text-white transition-all hover:bg-orange-700 shadow-lg shadow-orange-500/20">Salvar</button>
+          </div>
+        }
+        eyebrow="Registro de glicemia"
+        title={<span className="uppercase">{editingId ? 'Editar registro' : 'Novo registro'}</span>}
+        subtitle="Preencha os dados abaixo para salvar a medicao com mais clareza e sem perder o contexto."
+      >
+            <form id="record-form" onSubmit={handleSave} className="space-y-6">
+              <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
@@ -1322,28 +1393,33 @@ const RecordsPage: React.FC = () => {
                 <>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medicamento</label>
-                    <select
-                      value={formData.medicamento}
-                      onChange={e => {
-                        const medicamento = e.target.value as Medicamento | '';
-                        setFormData({ ...formData, medicamento });
-                        setDoseError(null);
-                        if (medicamento === Medicamento.NENHUM || medicamento === 'Nenhum') {
-                          setDoseValue('0');
-                        } else if (doseValue === '0') {
-                          setDoseValue('6');
-                        }
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none"
-                    >
-                      <option value="">Selecione um medicamento</option>
-                      {medications.map(med => (
-                        <option key={med.id} value={med.nome}>
-                          {med.nome} - {med.fabricante || 'Não informado'} ({med.quantidade} {med.unidade})
-                        </option>
-                      ))}
-                      <option value="Nenhum">Nenhum</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={formData.medicamento}
+                        onChange={e => {
+                          const medicamento = e.target.value as Medicamento | '';
+                          setFormData({ ...formData, medicamento });
+                          setDoseError(null);
+                          if (medicamento === Medicamento.NENHUM || medicamento === '') {
+                            setDoseValue('0');
+                          } else if (doseValue === '0') {
+                            setDoseValue('6');
+                          }
+                        }}
+                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-sm font-bold text-slate-700 outline-none transition-all hover:border-slate-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-600 dark:focus:border-orange-500 dark:focus:ring-orange-950/40"
+                      >
+                        <option value="">Selecione um medicamento</option>
+                        {medications.map(med => (
+                          <option key={med.id} value={med.nome}>
+                            {med.nome} - {med.fabricante || 'Não informado'} ({med.quantidade} {med.unidade})
+                          </option>
+                        ))}
+                        <option value="Nenhum">Nenhum</option>
+                      </select>
+                      <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400 dark:text-slate-500">
+                        <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => window.location.hash = '#/medicamentos'}
@@ -1354,7 +1430,7 @@ const RecordsPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {!isNoMedication && (
+                  {hasSelectedMedication && (
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
@@ -1385,16 +1461,9 @@ const RecordsPage: React.FC = () => {
                 <input type="checkbox" id="createAlert" className="w-5 h-5 accent-orange-600 cursor-pointer" />
                 <label htmlFor="createAlert" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Criar alerta para este registro</label>
               </div>
-            </form>
-            <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111121] px-5 py-4 md:px-8 md:py-5">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
-                <button form="record-form" type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20">Salvar Registro</button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </form>
+      </BaseModal>
 
       <style>{`
         @keyframes toast-in { 0% { opacity: 0; transform: scale(0.6) translateY(50px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }

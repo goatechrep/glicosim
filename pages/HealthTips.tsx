@@ -17,7 +17,7 @@ const HealthTipsPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-in space-y-6 mb-10">
       <header className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight text-orange-600 dark:text-white uppercase leading-none">Dicas de Saúde</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">

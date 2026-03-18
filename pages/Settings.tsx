@@ -8,6 +8,7 @@ import { settingsService } from '../services/settingsService';
 import { plans, getPlanById, getFormattedPrice } from '../data/plans';
 import { PlanoType } from '../types';
 import { applyCPFMask, applyWhatsAppMask, validateCPF } from '../utils/formatters';
+import BaseModal from '../components/BaseModal';
 
 const SettingsPage: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -586,70 +587,66 @@ const SettingsPage: React.FC = () => {
         )}
 
         {/* Modal de Confirmação Delete */}
-        {showDeleteModal && (
-          <>
-            <div 
-              className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9998] animate-fade-in"
-              onClick={() => setShowDeleteModal(false)}
-              aria-hidden="true"
-            />
-            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] animate-scale-fade-in bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-sm">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">warning</span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">CONFIRMAR DELETAR</h3>
-              </div>
-
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                Você está prestes a deletar <strong>TODOS</strong> os seus dados permanentemente, incluindo:
-              </p>
-
-              <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-2 mb-6 ml-4">
-                <li>• Registros de glicemia</li>
-                <li>• Alertas e notificações</li>
-                <li>• Dados do perfil</li>
-                <li>• Fotos de perfil</li>
-              </ul>
-
-              <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-6 uppercase tracking-widest">
-                Esta ação não pode ser desfeita!
-              </p>
-
-              <div className="mb-6">
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 block">
-                  Digite "DELETAR" para confirmar:
-                </label>
-                <input
-                  type="text"
-                  value={deleteConfirmText}
-                  onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
-                  placeholder="DELETAR"
-                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-bold uppercase dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setDeleteConfirmText('');
-                  }}
-                  className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteAllData}
-                  disabled={loading || deleteConfirmText !== 'DELETAR'}
-                  className="flex-1 px-4 py-3 bg-red-600 text-white font-bold text-xs uppercase rounded-lg hover:bg-red-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all"
-                >
-                  {loading ? 'Deletando...' : 'Deletar'}
-                </button>
+        <BaseModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          panelClassName="max-w-sm rounded-2xl"
+          bodyClassName="p-8"
+          overlayClassName="bg-black/50 dark:bg-black/70"
+          title={<span className="uppercase">Confirmar Deletar</span>}
+          subtitle="Você está prestes a deletar todos os seus dados permanentemente."
+        >
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <span className="material-symbols-outlined text-2xl text-red-600 dark:text-red-400">warning</span>
               </div>
             </div>
-          </>
-        )}
+
+            <ul className="ml-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
+              <li>• Registros de glicemia</li>
+              <li>• Alertas e notificações</li>
+              <li>• Dados do perfil</li>
+              <li>• Fotos de perfil</li>
+            </ul>
+
+            <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400">
+              Esta ação não pode ser desfeita!
+            </p>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Digite "DELETAR" para confirmar:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="DELETAR"
+                className="w-full rounded-lg border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-bold uppercase outline-none focus:border-transparent focus:ring-2 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                }}
+                className="flex-1 rounded-lg border-2 border-slate-200 bg-slate-100 px-4 py-3 text-xs font-bold uppercase text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteAllData}
+                disabled={loading || deleteConfirmText !== 'DELETAR'}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-3 text-xs font-bold uppercase text-white transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {loading ? 'Deletando...' : 'Deletar'}
+              </button>
+            </div>
+          </div>
+        </BaseModal>
       </div>
 
       <style>{`

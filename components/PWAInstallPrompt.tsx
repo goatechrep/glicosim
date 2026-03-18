@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import BaseModal from './BaseModal';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -184,25 +185,33 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
         </button>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-[80] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
-          <div className="w-full max-w-xl max-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-3rem)] bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden animate-slide-up flex flex-col">
-            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">Instalar GlicoSIM</h3>
-              <button
-                onClick={closeModal}
-                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center justify-center"
-                aria-label="Fechar modal de instalação"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="p-5 md:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Instale o app na tela inicial para abrir mais rapido e usar com experiencia nativa.
-              </p>
-
+      <BaseModal
+        isOpen={open}
+        onClose={closeModal}
+        panelClassName="max-w-xl max-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-3rem)]"
+        bodyClassName="p-5 md:p-6 space-y-4 overflow-y-auto flex-1 min-h-0"
+        footerClassName="px-5 md:px-6 pt-3 pb-5 md:pb-6"
+        overlayClassName="p-3 md:p-6 bg-slate-950/80 backdrop-blur-sm"
+        closeAriaLabel="Fechar modal de instalação"
+        title={<span className="text-sm uppercase tracking-wide">Instalar GlicoSIM</span>}
+        subtitle="Instale o app na tela inicial para abrir mais rapido e usar com experiencia nativa."
+        footer={
+          <div className="flex gap-3">
+            <button
+              onClick={closeModal}
+              className="flex-1 rounded-xl bg-slate-100 py-3 text-[11px] font-black uppercase tracking-widest text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={dismissPermanently}
+              className="flex-1 rounded-xl bg-slate-900 py-3 text-[11px] font-black uppercase tracking-widest text-white dark:bg-slate-700"
+            >
+              Não mostrar
+            </button>
+          </div>
+        }
+      >
               {!isIOS && deferredPrompt && (
                 <button
                   onClick={handleInstallNow}
@@ -296,25 +305,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ mode = 'floating' }
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div className="px-5 md:px-6 pt-3 pb-5 md:pb-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
-              <button
-                onClick={closeModal}
-                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-widest"
-              >
-                Fechar
-              </button>
-              <button
-                onClick={dismissPermanently}
-                className="flex-1 py-3 bg-slate-900 text-white dark:bg-slate-700 rounded-xl text-[11px] font-black uppercase tracking-widest"
-              >
-                Não mostrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </BaseModal>
     </>
   );
 };

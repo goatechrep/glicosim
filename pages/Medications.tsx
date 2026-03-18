@@ -4,6 +4,8 @@ import { Medication } from '../types/medication';
 import { getPlanById, getFormattedPrice } from '../data/plans';
 import { getBannersForPage } from '../data/banners';
 import { useAuth } from '../App';
+import BaseModal from '../components/BaseModal';
+import { activityService, ActivityItem } from '../services/activityService';
 
 interface Toast {
   message: string;
@@ -19,16 +21,23 @@ const MedicationsPage: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [failedBannerImages, setFailedBannerImages] = useState<Record<string, boolean>>({});
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockTarget, setStockTarget] = useState<Medication | null>(null);
+  const [stockAmount, setStockAmount] = useState('');
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
     nome: '',
     fabricante: '',
-    quantidade: 0,
+    quantidade: '' as number | '',
     unidade: 'UI' as 'UI' | 'mg' | 'co' | 'ml',
     limiteEstoque: 10
   });
 
-  useEffect(() => { loadMedications(); }, []);
+  useEffect(() => {
+    loadMedications();
+    setRecentActivities(activityService.getRecentActivities(5));
+  }, []);
 
   useEffect(() => {
     if (banners.length > 1) {
@@ -41,6 +50,7 @@ const MedicationsPage: React.FC = () => {
 
   const loadMedications = () => {
     setMedications(medicationService.getMedications());
+    setRecentActivities(activityService.getRecentActivities(5));
   };
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -51,16 +61,52 @@ const MedicationsPage: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const quantity = Number(formData.quantidade);
+    if (Number.isNaN(quantity) || quantity < 0) {
+      addToast('Informe uma quantidade valida.', 'error');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      quantidade: quantity,
+    };
+
     if (editingId) {
-      medicationService.updateMedication(editingId, formData);
+      medicationService.updateMedication(editingId, payload);
       addToast('Medicamento atualizado!');
     } else {
-      medicationService.saveMedication(formData);
+      medicationService.saveMedication(payload);
       addToast('Medicamento cadastrado!');
     }
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ nome: '', fabricante: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
+    setFormData({ nome: '', fabricante: '', quantidade: '', unidade: 'UI', limiteEstoque: 10 });
+    loadMedications();
+  };
+
+  const handleQuickStockEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockTarget) {
+      return;
+    }
+
+    const quantityToAdd = Number(stockAmount);
+    if (Number.isNaN(quantityToAdd) || quantityToAdd <= 0) {
+      addToast('Informe uma quantidade valida para adicionar.', 'error');
+      return;
+    }
+
+    const success = medicationService.increaseStock(stockTarget.id, quantityToAdd);
+    if (!success) {
+      addToast('Nao foi possivel atualizar o estoque.', 'error');
+      return;
+    }
+
+    addToast('Estoque atualizado com sucesso!');
+    setIsStockModalOpen(false);
+    setStockTarget(null);
+    setStockAmount('');
     loadMedications();
   };
 
@@ -79,7 +125,7 @@ const MedicationsPage: React.FC = () => {
       <button
         onClick={() => {
           setEditingId(null);
-          setFormData({ nome: '', fabricante: '', quantidade: 0, unidade: 'UI', limiteEstoque: 10 });
+          setFormData({ nome: '', fabricante: '', quantidade: '', unidade: 'UI', limiteEstoque: 10 });
           setIsModalOpen(true);
         }}
         className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40 w-14 h-14 md:w-16 md:h-16 bg-orange-600 text-white rounded-full flex items-center justify-center border border-orange-500 active:scale-90 transition-transform"
@@ -88,9 +134,9 @@ const MedicationsPage: React.FC = () => {
       </button>
 
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[10999] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
           <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
             t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
@@ -204,9 +250,25 @@ const MedicationsPage: React.FC = () => {
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
           </div>
           <div className="px-6 py-8">
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
-              Nenhuma atividade recente por aqui ainda.
-            </p>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                Nenhuma atividade recente por aqui ainda.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-black uppercase text-slate-900 dark:text-white">{activity.title}</p>
+                      <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{activity.description}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {new Date(activity.date).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -250,6 +312,18 @@ const MedicationsPage: React.FC = () => {
                       <span className="material-symbols-outlined text-[18px]">edit</span>
                     </button>
                     <button
+                      onClick={() => {
+                        setStockTarget(med);
+                        setStockAmount('');
+                        setIsStockModalOpen(true);
+                      }}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:text-blue-300"
+                      title="Adicionar estoque"
+                      aria-label={`Adicionar estoque para ${med.nome}`}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                    </button>
+                    <button
                       onClick={() => handleDelete(med.id)}
                       className="w-9 h-9 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                     >
@@ -263,16 +337,16 @@ const MedicationsPage: React.FC = () => {
         )}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-t-lg md:rounded-lg overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
-            <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{editingId ? 'Editar' : 'Novo'} Medicamento</h3>
-              <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-            <form onSubmit={handleSave} className="p-8 pb-24 md:pb-8 space-y-6">
+      <BaseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        overlayClassName="items-end md:items-center p-0 md:p-4"
+        panelClassName="max-w-lg rounded-t-lg md:rounded-lg"
+        bodyClassName="p-8 pb-24 md:pb-8"
+        title={<span className="text-base uppercase">{editingId ? 'Editar' : 'Novo'} Medicamento</span>}
+        subtitle="Preencha os dados do estoque para manter o inventario organizado."
+      >
+            <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Medicamento</label>
                 <input
@@ -303,9 +377,10 @@ const MedicationsPage: React.FC = () => {
                   <input
                     type="number"
                     value={formData.quantidade}
-                    onChange={e => setFormData({...formData, quantidade: Number(e.target.value)})}
+                    onChange={e => setFormData({...formData, quantidade: e.target.value === '' ? '' : Number(e.target.value)})}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white"
                     min="0"
+                    placeholder="0"
                     required
                   />
                 </div>
@@ -342,9 +417,54 @@ const MedicationsPage: React.FC = () => {
                 <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal>
+
+      <BaseModal
+        isOpen={isStockModalOpen && Boolean(stockTarget)}
+        onClose={() => {
+          setIsStockModalOpen(false);
+          setStockTarget(null);
+          setStockAmount('');
+        }}
+        overlayClassName="z-[3100]"
+        panelClassName="max-w-md rounded-[28px]"
+        bodyClassName="p-6"
+        eyebrow="Entrada rapida"
+        title="Adicionar estoque"
+        subtitle={stockTarget ? `${stockTarget.nome} (${stockTarget.unidade})` : undefined}
+      >
+            <form onSubmit={handleQuickStockEntry} className="space-y-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantidade a adicionar</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={stockAmount}
+                  onChange={(e) => setStockAmount(e.target.value)}
+                  placeholder={`Ex: 10 ${stockTarget.unidade}`}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStockModalOpen(false);
+                    setStockTarget(null);
+                    setStockAmount('');
+                  }}
+                  className="flex-1 rounded-2xl border-2 border-slate-200 bg-slate-100 py-3.5 text-[12px] font-black uppercase text-slate-700 transition-all hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="flex-1 rounded-2xl bg-blue-600 py-3.5 text-[12px] font-black uppercase text-white transition-all hover:bg-blue-700">
+                  Inserir
+                </button>
+              </div>
+            </form>
+      </BaseModal>
 
       <style>{`
         @keyframes toast-in { 0% { opacity: 0; transform: scale(0.6) translateY(50px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }

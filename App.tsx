@@ -16,10 +16,12 @@ const HelpPage = lazy(() => import('./pages/Help'));
 const HealthTipsPage = lazy(() => import('./pages/HealthTips'));
 const ProPage = lazy(() => import('./pages/Pro'));
 const UpdatesPage = lazy(() => import('./pages/Updates'));
+const ContactPage = lazy(() => import('./pages/Contact'));
 
 // Components
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
+import BaseModal from './components/BaseModal';
 
 // Loading fallback
 const PageLoader: React.FC = () => (
@@ -191,36 +193,39 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {/* Alerta de sessão expirada */}
-      {sessionExpired && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[80] flex items-center justify-center">
-          <div className="bg-white dark:bg-[#111121] border border-slate-200 dark:border-slate-800 rounded-2xl p-7 max-w-sm animate-scale-fade-in">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">
-                  lock
-                </span>
-              </div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">
-                Sessão Expirada
-              </h3>
+      <BaseModal
+        isOpen={sessionExpired}
+        onClose={() => setSessionExpired(false)}
+        panelClassName="max-w-sm rounded-2xl"
+        bodyClassName="p-7"
+        overlayClassName="bg-black/50 dark:bg-black/70"
+        title={<span className="uppercase">Sessão Expirada</span>}
+        subtitle="Seus dados não foram encontrados. Por segurança, você foi desconectado."
+      >
+        <div className="space-y-6">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+              <span className="material-symbols-outlined text-2xl text-red-600 dark:text-red-400">
+                lock
+              </span>
             </div>
-
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-              Seus dados não foram encontrados. Por segurança, você foi desconectado. Faça login novamente para continuar.
-            </p>
-
-            <button
-              onClick={() => {
-                setSessionExpired(false);
-                window.location.hash = '#/login';
-              }}
-              className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all"
-            >
-              Ir para Login
-            </button>
           </div>
+
+          <p className="text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            Faça login novamente para continuar usando a plataforma.
+          </p>
+
+          <button
+            onClick={() => {
+              setSessionExpired(false);
+              window.location.hash = '#/login';
+            }}
+            className="w-full rounded-lg bg-orange-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-orange-700"
+          >
+            Ir para Login
+          </button>
         </div>
-      )}
+      </BaseModal>
       {children}
     </AuthContext.Provider>
   );
@@ -342,6 +347,7 @@ const App: React.FC = () => {
                             <Route path="/dicas-saude" element={<HealthTipsPage />} />
                             <Route path="/pro" element={<ProPage />} />
                             <Route path="/atualizacoes" element={<UpdatesPage />} />
+                            <Route path="/contato" element={<ContactPage />} />
                             <Route path="*" element={<Navigate to="/" />} />
                           </Routes>
                         </LazyPage>

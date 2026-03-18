@@ -9,6 +9,7 @@ import {
   PaymentHistory, 
   Alert 
 } from '../types';
+import { notificationService } from './notificationService';
 
 const STORAGE_KEY = 'glicosim_data';
 
@@ -105,11 +106,7 @@ const SEED_DATA: StorageState = {
     { id: 'p1', date: '2023-10-01', amount: 0, status: 'PAGO', plan: 'Free' },
     { id: 'p2', date: '2023-11-01', amount: 0, status: 'PAGO', plan: 'Free' }
   ],
-  alerts: [
-    { id: 'a1', title: 'Vencimento de Receita', description: 'Sua receita de Humalog vence em 3 dias.', date: '2023-12-01', severity: 'medium' },
-    { id: 'a2', title: 'Checkup Trimestral', description: 'Agende seu exame de Hemoglobina Glicada.', date: '2023-12-15', severity: 'low' },
-    { id: 'a3', title: 'Meta Não Atingida', description: 'Seu índice médio subiu 15% esta semana.', date: '2023-11-28', severity: 'high' }
-  ]
+  alerts: notificationService.getNotifications()
 };
 
 const getStorage = (): StorageState => {
@@ -253,7 +250,7 @@ export const mockService = {
       average: Math.round(avg),
       goalStatus: avg >= 55 && avg <= 100 ? 'Saudável' : 'Ajustar',
       totalRecords: records.length,
-      alerts: storage.alerts,
+      alerts: notificationService.getNotifications(),
       payments: storage.payments
     };
   },
@@ -267,17 +264,10 @@ export const mockService = {
   // ALERTS
   deleteAlert: async (id: string): Promise<void> => {
     await delay(300);
-    const storage = getStorage();
-    storage.alerts = storage.alerts.filter(a => a.id !== id);
-    setStorage(storage);
+    notificationService.deleteNotification(id);
   },
   updateAlert: async (id: string, data: Partial<Alert>): Promise<Alert> => {
     await delay(300);
-    const storage = getStorage();
-    const index = storage.alerts.findIndex(a => a.id === id);
-    if (index === -1) throw new Error('Alert not found');
-    storage.alerts[index] = { ...storage.alerts[index], ...data };
-    setStorage(storage);
-    return storage.alerts[index];
+    return notificationService.updateNotification(id, data);
   }
 };

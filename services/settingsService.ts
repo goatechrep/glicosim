@@ -8,7 +8,7 @@ export interface GlucoseSettings {
 
 const DEFAULT_SETTINGS: GlucoseSettings = {
   minLimit: 55,
-  idealMax: 100,
+  idealMax: 143,
   maxLimit: 500
 };
 

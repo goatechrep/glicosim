@@ -55,9 +55,9 @@ const Footer: React.FC = () => {
                   </NavLink>
                 </li>
                 <li>
-                  <a href="#" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors">
+                  <NavLink to="/contato" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors">
                     Contato
-                  </a>
+                  </NavLink>
                 </li>
               </ul>
             </div>
@@ -69,9 +69,13 @@ const Footer: React.FC = () => {
               </h4>
               <ul className="space-y-2.5">
                 <li>
-                  <a href="#" className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setActiveLegalModal('lgpd')}
+                    className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-orange-600 transition-colors"
+                  >
                     LGPD
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <button

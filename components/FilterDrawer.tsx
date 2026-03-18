@@ -38,14 +38,14 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose, filters, o
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[50] animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
       
       {/* Drawer */}
       <div 
-        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] rounded-t-3xl z-[55] max-h-[85vh] overflow-y-auto transform transition-transform duration-300 ease-out translate-y-0"
+        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111121] rounded-t-3xl z-[2010] max-h-[85vh] overflow-y-auto transform transition-transform duration-300 ease-out translate-y-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="filter-drawer-title"
@@ -63,7 +63,7 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose, filters, o
             </h3>
             <button
               onClick={onClose}
-              className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-red-700 bg-red-600 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 dark:border-red-500 dark:bg-red-600"
               aria-label="Fechar filtros"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>

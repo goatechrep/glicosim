@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { mockService } from '../services/mockService';
 import { Alert } from '../types';
+import { notificationService } from '../services/notificationService';
+import BaseModal from '../components/BaseModal';
 
 interface Toast {
   message: string;
@@ -15,7 +17,13 @@ const AlertsPage: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ title: '', description: '', severity: 'medium' as 'low' | 'medium' | 'high' });
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    severity: 'medium' as 'low' | 'medium' | 'high',
+    channel: 'push' as 'push' | 'email' | 'whatsapp',
+    deliveryStatus: 'scheduled' as 'draft' | 'scheduled' | 'sent' | 'failed',
+  });
 
   useEffect(() => {
     loadAlerts();
@@ -51,14 +59,23 @@ const AlertsPage: React.FC = () => {
 
   const handleEdit = (alert: Alert) => {
     setEditingId(alert.id);
-    setFormData({ title: alert.title, description: alert.description, severity: alert.severity });
+    setFormData({
+      title: alert.title,
+      description: alert.description,
+      severity: alert.severity,
+      channel: alert.channel || 'push',
+      deliveryStatus: alert.deliveryStatus || 'scheduled',
+    });
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      await mockService.updateAlert(editingId, formData);
+      await mockService.updateAlert(editingId, {
+        ...formData,
+        scheduledFor: new Date().toISOString(),
+      });
       addToast('Alerta atualizado!');
     }
     setIsModalOpen(false);
@@ -72,12 +89,25 @@ const AlertsPage: React.FC = () => {
     high: 'bg-red-50 dark:bg-red-950/20 text-red-600 border-red-100 dark:border-red-900/30'
   };
 
+  const channelLabels = {
+    push: 'Push',
+    email: 'E-mail',
+    whatsapp: 'WhatsApp',
+  };
+
+  const statusStyles = {
+    draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200',
+    scheduled: 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-300',
+    sent: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300',
+    failed: 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-300',
+  };
+
   return (
     <div className="animate-fade-in space-y-6">
       {toasts.length > 0 && (
-        <div className="fixed inset-0 z-[10999] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
+        <div className="fixed inset-0 z-[2100] bg-slate-950/70 backdrop-blur-md animate-fade-in pointer-events-none" />
       )}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[11000] pointer-events-none flex flex-col items-center justify-center gap-3">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2110] pointer-events-none flex flex-col items-center justify-center gap-3">
         {toasts.map(t => (
           <div key={t.id} className={`pointer-events-auto flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border-2 text-center min-w-[280px] animate-toast-in backdrop-blur-sm shadow-2xl ${
             t.type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 border-emerald-600 dark:border-emerald-700 text-white' : 
@@ -97,13 +127,9 @@ const AlertsPage: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={() => {
-              const testNotifications = [
-                { title: 'Glicemia Alta', description: 'Sua glicemia está acima de 180 mg/dL', severity: 'high' as const },
-                { title: 'Lembrete de Medicação', description: 'Hora de tomar sua insulina', severity: 'medium' as const },
-                { title: 'Estoque Baixo', description: 'Medicamento com estoque baixo', severity: 'low' as const }
-              ];
-              const random = testNotifications[Math.floor(Math.random() * testNotifications.length)];
-              addToast(`Teste: ${random.title}`, 'info');
+              const created = notificationService.dispatchMockNotification();
+              addToast(`Enviada: ${created.title}`, 'info');
+              loadAlerts();
             }}
             className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest px-4 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
           >
@@ -139,6 +165,17 @@ const AlertsPage: React.FC = () => {
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">{alert.date.split('-').reverse().slice(0,2).join('/')}</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal font-medium pr-4">{alert.description}</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] ${statusStyles[alert.deliveryStatus || 'scheduled']}`}>
+                  {alert.deliveryStatus || 'scheduled'}
+                </span>
+                <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                  {channelLabels[alert.channel || 'push']}
+                </span>
+                <span className="inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-orange-600 dark:bg-orange-950/30 dark:text-orange-300">
+                  {alert.source || 'manual'}
+                </span>
+              </div>
               <div className="flex gap-2 pt-3">
                 <button onClick={() => handleEdit(alert)} className="px-4 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Editar</button>
                 <button onClick={() => handleDelete(alert.id)} className="px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-all">Excluir</button>
@@ -148,16 +185,15 @@ const AlertsPage: React.FC = () => {
         ))}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-6">
-          <div className="w-full max-w-lg bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-slide-up border border-slate-100 dark:border-slate-800">
-            <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Editar Alerta</h3>
-              <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-400 rounded-xl hover:text-red-500">
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-            <form onSubmit={handleSave} className="p-8 space-y-6">
+      <BaseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        panelClassName="max-w-lg rounded-lg"
+        bodyClassName="p-8"
+        title={<span className="text-base uppercase">Editar Alerta</span>}
+        subtitle="Atualize os dados da notificacao mockada para testar o fluxo."
+      >
+        <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Título</label>
                 <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white" required />
@@ -174,14 +210,31 @@ const AlertsPage: React.FC = () => {
                   <option value="high">Alta</option>
                 </select>
               </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Canal</label>
+                  <select value={formData.channel} onChange={e => setFormData({...formData, channel: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                    <option value="push">Push</option>
+                    <option value="email">E-mail</option>
+                    <option value="whatsapp">WhatsApp</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
+                  <select value={formData.deliveryStatus} onChange={e => setFormData({...formData, deliveryStatus: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold outline-none dark:text-white appearance-none">
+                    <option value="draft">Rascunho</option>
+                    <option value="scheduled">Agendada</option>
+                    <option value="sent">Enviada</option>
+                    <option value="failed">Falhou</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[12px] uppercase rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700 transition-all">Cancelar</button>
                 <button type="submit" className="flex-1 py-4 bg-orange-600 text-white font-black text-[12px] uppercase rounded-xl hover:bg-orange-700 transition-all">Salvar</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </BaseModal>
 
       <style>{`
         @keyframes toast-in { 0% { opacity: 0; transform: scale(0.6) translateY(50px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }

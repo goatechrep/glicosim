@@ -72,4 +72,13 @@ export interface Alert {
   description: string;
   date: string;
   severity: 'low' | 'medium' | 'high';
+  channel?: 'push' | 'email' | 'whatsapp';
+  deliveryStatus?: 'draft' | 'scheduled' | 'sent' | 'failed';
+  source?: 'manual' | 'automation' | 'system';
+  createdAt?: string;
+  scheduledFor?: string;
+  sentAt?: string;
+  read?: boolean;
+  ctaLabel?: string;
+  ctaUrl?: string;
 }

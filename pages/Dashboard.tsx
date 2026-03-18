@@ -1,27 +1,22 @@
 
-import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo, lazy, Suspense } from 'react';
 import { NavLink } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { supabaseService } from '../services/supabaseService';
 import { dataSyncService } from '../services/dataSyncService';
 import { medicationService } from '../services/medicationService';
 import { reminderService } from '../services/reminderService';
+import { activityService, ActivityItem } from '../services/activityService';
 import { GlucoseRecord } from '../types';
 import { useAuth } from '../App';
 import { SkeletonCard, SkeletonChart } from '../components/SkeletonCard';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
+import BaseModal from '../components/BaseModal';
 import { getAdSenseBlock } from '../data/adsense';
 import { getPlanById, getFormattedPrice } from '../data/plans';
 import { getBannersForPage } from '../data/banners';
 import { healthTipsService } from '../services/healthTipsService';
 import { HealthTipArticle } from '../data/healthTips';
 
-const getGlycemiaStatus = (value: number) => {
-  if (value > 180) return { label: 'Muito Alta', color: 'text-red-600 dark:text-red-400' };
-  if (value > 140) return { label: 'Alta', color: 'text-amber-600 dark:text-amber-400' };
-  if (value < 70) return { label: 'Baixa', color: 'text-blue-600 dark:text-blue-400' };
-  return { label: 'Normal', color: 'text-emerald-600 dark:text-emerald-400' };
-};
+const GlucoseChartSection = lazy(() => import('../components/dashboard/GlucoseChartSection'));
 
 const parseISODate = (iso: string): Date | null => {
   if (!iso || typeof iso !== 'string') return null;
@@ -91,6 +86,7 @@ const DashboardPage: React.FC = () => {
   const [healthTickerItems, setHealthTickerItems] = useState<HealthTipArticle[]>([]);
   const [showRefreshPopover, setShowRefreshPopover] = useState(false);
   const [showOfflinePopover, setShowOfflinePopover] = useState(false);
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const banners = getBannersForPage('dashboard');
 
   useEffect(() => {
@@ -205,6 +201,7 @@ const DashboardPage: React.FC = () => {
     setRecords(r);
     setLowStockMeds(lowStock);
     setDueReminders(reminders);
+    setRecentActivities(activityService.getRecentActivities(5));
 
     if (reminders.length > 0 && !reminderModalOpen) {
       setCurrentReminder(reminders[0]);
@@ -711,128 +708,16 @@ const DashboardPage: React.FC = () => {
         })()
       }
 
-      <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] overflow-hidden flex flex-col">
-        <div className="p-4 sm:p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-3 md:gap-4">
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Tendência da Glicemia</h3>
-            <p className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              {chartRangeLabel}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl w-full sm:w-auto">
-            {periodOptions.map(option => (
-              <button
-                key={option.value}
-                onClick={() => setPeriod(option.value)}
-                className={`
-                  flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg
-                  transition-all duration-200
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-1
-                  ${period === option.value
-                    ? 'bg-white dark:bg-slate-700 text-orange-600'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                  }
-                `}
-                aria-label={`Mostrar dados de ${option.label}`}
-                aria-pressed={period === option.value}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="p-4 sm:p-6">
-          <div className="h-[250px] md:h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="orangeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#cbd5e1" opacity={0.3} className="dark:opacity-10" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
-                  dy={12}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }}
-                  domain={[0, 300]}
-                />
-                <Tooltip
-                  cursor={{ stroke: '#f97316', strokeOpacity: 0.25, strokeWidth: 1 }}
-                  contentStyle={{
-                    backgroundColor: 'rgba(255,255,255,0.98)',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.2)',
-                    padding: '8px 10px',
-                    minWidth: '180px'
-                  }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const point = payload[0]?.payload as any;
-                    const status = getGlycemiaStatus(point.val);
-
-                    return (
-                      <div className="rounded-xl border border-slate-200 bg-white/95 shadow-2xl p-2 min-w-[180px]">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{point.name}</p>
-                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                          <p className="text-base font-black text-orange-600">{point.val} <span className="text-[10px] text-slate-500">mg/dL</span></p>
-                          <p className={`text-[10px] font-black ${status.color}`}>{status.label}</p>
-                        </div>
-                        <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                          <p className="text-slate-600">Mín: <span className="font-black text-slate-900">{point.min}</span></p>
-                          <p className="text-slate-600">Máx: <span className="font-black text-slate-900">{point.max}</span></p>
-                          <p className="text-slate-600">Medições: <span className="font-black text-slate-900">{point.count}</span></p>
-                          <p className="text-slate-600">Vs média período: <span className={`font-black ${point.deltaPeriod > 0 ? 'text-red-600' : point.deltaPeriod < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>{point.deltaPeriod > 0 ? `+${point.deltaPeriod}` : point.deltaPeriod} mg/dL</span></p>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="val"
-                  stroke="#f97316"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#orangeGrad)"
-                  dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#f97316' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          {chartInsights && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Média Ponderada</p>
-                <p className="text-sm font-black text-orange-600">{chartInsights.avg} mg/dL</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Maior Média Dia</p>
-                <p className="text-sm font-black text-red-600">{chartInsights.max} mg/dL</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Menor Média Dia</p>
-                <p className="text-sm font-black text-emerald-600">{chartInsights.min} mg/dL</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2 border border-slate-200 dark:border-slate-800">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dias no Gráfico</p>
-                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{chartInsights.days}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <Suspense fallback={<SkeletonChart />}>
+        <GlucoseChartSection
+          chartData={chartData as any}
+          chartInsights={chartInsights}
+          chartRangeLabel={chartRangeLabel}
+          period={period}
+          periodOptions={periodOptions}
+          onChangePeriod={setPeriod}
+        />
+      </Suspense>
 
       <div className="grid gap-4 md:gap-8 md:grid-cols-2 pb-24 md:pb-0">
         <div className="rounded-4xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#111121] flex flex-col">
@@ -887,25 +772,40 @@ const DashboardPage: React.FC = () => {
             </NavLink>
           </div>
           <div className="p-4 sm:p-6 md:p-8 flex-1">
-            <div className="space-y-6">
-              {records.slice(0, 5).map(record => (
-                <div key={record.id} className="flex items-center justify-between gap-3 group">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-orange-600 transition-all">
-                      <span className="material-symbols-outlined text-[22px]">water_drop</span>
+            {recentActivities.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-400">Nenhuma atividade recente por aqui ainda.</p>
+            ) : (
+              <div className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between gap-3 group">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className={`w-11 h-11 rounded-2xl border flex items-center justify-center transition-all ${
+                        activity.accent === 'blue'
+                          ? 'bg-blue-50 border-blue-100 text-blue-500 dark:bg-blue-900/20 dark:border-blue-800'
+                          : activity.accent === 'emerald'
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-500 dark:bg-emerald-900/20 dark:border-emerald-800'
+                            : activity.accent === 'red'
+                              ? 'bg-red-50 border-red-100 text-red-500 dark:bg-red-900/20 dark:border-red-800'
+                              : activity.accent === 'violet'
+                                ? 'bg-violet-50 border-violet-100 text-violet-500 dark:bg-violet-900/20 dark:border-violet-800'
+                                : 'bg-slate-50 border-slate-100 text-orange-500 dark:bg-slate-900 dark:border-slate-800'
+                      }`}>
+                        <span className="material-symbols-outlined text-[22px]">{activity.icon}</span>
+                      </div>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate text-xs font-black uppercase tracking-tight text-slate-900 dark:text-white">{activity.title}</span>
+                        <span className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">{activity.description}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{record.periodo}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{record.data.split('-').reverse().slice(0, 2).join('/')}</span>
+                    <div className="shrink-0 text-right">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        {new Date(activity.date).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className={`text-xl font-black tracking-tighter ${record.antesRefeicao > 140 ? 'text-amber-600' : 'text-orange-600'}`}>{record.antesRefeicao}</span>
-                    <span className="text-[10px] text-slate-400 font-black ml-1 uppercase">mg/dL</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -921,20 +821,15 @@ const DashboardPage: React.FC = () => {
         )
       }
 
-      {
-        reminderModalOpen && currentReminder && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-6">
-            <div className="w-full max-w-md bg-white dark:bg-[#111121] rounded-lg overflow-hidden animate-zoom-in border border-slate-100 dark:border-slate-800">
-              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl">schedule</span>
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Lembrete de Glicemia</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Medição 2h após</p>
-                </div>
-              </div>
-              <div className="p-8 space-y-6">
+      <BaseModal
+        isOpen={reminderModalOpen && Boolean(currentReminder)}
+        onClose={handleSkipReminder}
+        panelClassName="max-w-md rounded-lg"
+        bodyClassName="p-8"
+        title={<span className="uppercase">Lembrete de Glicemia</span>}
+        subtitle="Medição 2h após"
+      >
+              <div className="space-y-6">
                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
                   <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Registro Original:</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -965,17 +860,14 @@ const DashboardPage: React.FC = () => {
                   <button onClick={handleSaveReminder} className="flex-1 py-4 bg-blue-600 text-white font-black text-[12px] uppercase rounded-xl">Salvar</button>
                 </div>
               </div>
-            </div>
-          </div>
-        )
-      }
+      </BaseModal>
 
       <style>{`
         .health-marquee-track {
           display: flex;
           width: max-content;
           min-width: 100%;
-          animation: health-marquee 18s linear infinite;
+          animation: health-marquee 28s linear infinite;
           will-change: transform;
         }
         .health-marquee-row {

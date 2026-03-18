@@ -4,6 +4,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { supabaseService } from '../services/supabaseService';
 import LegalModal from '../components/LegalModal';
+import BaseModal from '../components/BaseModal';
 import { LegalContentType } from '../data/legalContent';
 
 type PasswordStrength = 'fraco' | 'medio' | 'forte' | 'muito-forte';
@@ -363,6 +364,14 @@ const LoginPage: React.FC = () => {
             className="text-slate-600 dark:text-slate-300 underline cursor-pointer"
           >
             Política de Privacidade
+          </button>{' '}
+          e{' '}
+          <button
+            type="button"
+            onClick={() => setActiveLegalModal('lgpd')}
+            className="text-slate-600 dark:text-slate-300 underline cursor-pointer"
+          >
+            LGPD
           </button>.
         </p>
         </div>
@@ -371,19 +380,15 @@ const LoginPage: React.FC = () => {
       <LegalModal type={activeLegalModal} onClose={() => setActiveLegalModal(null)} />
 
       {/* Modal Esqueceu Senha */}
-      {showForgotModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-lg p-8 w-full max-w-md border border-slate-200 dark:border-slate-800 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white">Recuperar Senha</h2>
-              <button
-                onClick={() => setShowForgotModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-              >
-                <span className="material-symbols-outlined text-2xl">close</span>
-              </button>
-            </div>
-
+      <BaseModal
+        isOpen={showForgotModal}
+        onClose={() => setShowForgotModal(false)}
+        panelClassName="max-w-md rounded-lg"
+        bodyClassName="p-8"
+        overlayClassName="bg-black/50"
+        title={<span className="text-2xl">Recuperar Senha</span>}
+        subtitle="Digite seu email para receber o link de recuperacao."
+      >
             {forgotSuccess ? (
               <div className="text-center space-y-4 py-8">
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
@@ -396,8 +401,6 @@ const LoginPage: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleForgotPassword} className="space-y-4">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Digite seu email e enviaremos um link para recuperar sua senha.</p>
-                
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">E-mail</label>
                   <div className="relative">
@@ -439,9 +442,7 @@ const LoginPage: React.FC = () => {
                 </button>
               </form>
             )}
-          </div>
-        </div>
-      )}
+      </BaseModal>
       
       <style>{`
         @keyframes slide-up {
