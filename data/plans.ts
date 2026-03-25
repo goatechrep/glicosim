@@ -7,6 +7,7 @@ export interface Plan {
   recursos: string[];
   cor: string;
   destaque: boolean;
+  disponivel?: boolean;
   stripeProductId?: string;
   stripePriceId?: string;
 }
@@ -45,8 +46,27 @@ export const plans: Plan[] = [
     ],
     cor: 'orange',
     destaque: true,
+    disponivel: true,
     stripeProductId: 'prod_glicosim_pro',
     stripePriceId: 'price_glicosim_pro_monthly'
+  },
+  {
+    id: 'LIFE',
+    nome: 'GlicoSIM LIFE',
+    preco: 99.90,
+    periodo: 'Mês',
+    descricao: 'Plano futuro com acompanhamento ampliado de rotina e bem-estar.',
+    recursos: [
+      'Tudo do plano PRO',
+      'Plano de alimentação (Nutricionista Registrado)',
+      'Plano de Atividades Físicas (Personal Verificado)',
+      'Temporizador de atividades',
+      'Portal de Compartilhamento *',
+      'Integração com glicosimetros *'
+    ],
+    cor: 'emerald',
+    destaque: false,
+    disponivel: false
   }
 ];
 

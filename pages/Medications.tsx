@@ -7,7 +7,6 @@ import { getBannersForPage } from '../data/banners';
 import { useAuth } from '../App';
 import BaseModal from '../components/BaseModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { activityService, ActivityItem } from '../services/activityService';
 
 interface Toast {
   message: string;
@@ -26,7 +25,6 @@ const MedicationsPage: React.FC = () => {
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockTarget, setStockTarget] = useState<Medication | null>(null);
   const [stockAmount, setStockAmount] = useState('');
-  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Medication | null>(null);
   const banners = getBannersForPage('medications');
   const [formData, setFormData] = useState({
@@ -39,7 +37,6 @@ const MedicationsPage: React.FC = () => {
 
   useEffect(() => {
     loadMedications();
-    setRecentActivities(activityService.getRecentActivities(5));
   }, []);
 
   useEffect(() => {
@@ -53,7 +50,6 @@ const MedicationsPage: React.FC = () => {
 
   const loadMedications = () => {
     setMedications(medicationService.getMedications());
-    setRecentActivities(activityService.getRecentActivities(5));
   };
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -257,34 +253,7 @@ const MedicationsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="pb-24">
-        <div className="mb-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111121]">
-          <div className="border-b border-slate-100 dark:border-slate-800 px-6 py-5">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Atividades Recentes</h3>
-          </div>
-          <div className="px-6 py-8">
-            {recentActivities.length === 0 ? (
-              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
-                Nenhuma atividade recente por aqui ainda.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-black uppercase text-slate-900 dark:text-white">{activity.title}</p>
-                      <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{activity.description}</p>
-                    </div>
-                    <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      {new Date(activity.date).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="pb-8 md:pb-4">
         {medications.length === 0 ? (
           <div className="bg-slate-50 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg p-16 text-center">
             <span className="material-symbols-outlined text-4xl text-slate-300 mb-4">medication</span>

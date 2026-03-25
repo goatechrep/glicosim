@@ -362,6 +362,7 @@ const SettingsPage: React.FC = () => {
                 <div className="flex md:justify-center gap-4 px-4 md:px-0 pb-4">
                   {plans.map(plan => {
                     const isCurrentPlan = user?.plano === plan.id;
+                    const isFuturePlan = plan.disponivel === false;
                     return (
                       <div
                         key={plan.id}
@@ -375,12 +376,21 @@ const SettingsPage: React.FC = () => {
                         <div className="p-6 pb-4">
                           <div className="flex flex-col items-center mb-4">
                             <div className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-sm mb-3 ${
-                              plan.id === 'PRO' ? 'bg-gradient-to-br from-orange-500 to-orange-600' : 'bg-slate-100 dark:bg-slate-800'
+                              plan.id === 'PRO'
+                                ? 'bg-gradient-to-br from-orange-500 to-orange-600'
+                                : plan.id === 'LIFE'
+                                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                  : 'bg-slate-100 dark:bg-slate-800'
                             }`}>
                               <span className={`material-symbols-outlined text-3xl ${
-                                plan.id === 'PRO' ? 'text-white' : 'text-slate-600 dark:text-slate-400'
-                              }`}>{plan.id === 'PRO' ? 'workspace_premium' : 'person'}</span>
+                                plan.id === 'PRO' || plan.id === 'LIFE' ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                              }`}>{plan.id === 'PRO' ? 'workspace_premium' : plan.id === 'LIFE' ? 'auto_awesome' : 'person'}</span>
                             </div>
+                            {isFuturePlan && (
+                              <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                Em breve
+                              </span>
+                            )}
                           </div>
                           <h5 className="text-2xl font-black text-slate-900 dark:text-white mb-1 text-center">{plan.nome}</h5>
                           <p className="text-xs text-slate-500 dark:text-slate-400 text-center">{plan.descricao}</p>
@@ -390,15 +400,21 @@ const SettingsPage: React.FC = () => {
                         <div className={`py-8 ${
                           plan.id === 'PRO' 
                             ? 'bg-gradient-to-br from-orange-500 to-orange-600' 
+                            : plan.id === 'LIFE'
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
                             : 'bg-slate-100 dark:bg-slate-800'
                         }`}>
                           <div className="flex items-baseline justify-center gap-1">
                             <p className={`text-5xl font-black ${
-                              plan.id === 'PRO' ? 'text-white' : 'text-slate-900 dark:text-white'
+                              plan.id === 'PRO' || plan.id === 'LIFE' ? 'text-white' : 'text-slate-900 dark:text-white'
                             }`}>{getFormattedPrice(plan)}</p>
                             {plan.preco > 0 && (
                               <p className={`text-lg font-bold ${
-                                plan.id === 'PRO' ? 'text-orange-100' : 'text-slate-500 dark:text-slate-400'
+                                plan.id === 'PRO'
+                                  ? 'text-orange-100'
+                                  : plan.id === 'LIFE'
+                                    ? 'text-emerald-100'
+                                    : 'text-slate-500 dark:text-slate-400'
                               }`}>/{plan.periodo}</p>
                             )}
                           </div>
@@ -421,6 +437,14 @@ const SettingsPage: React.FC = () => {
                             >
                               <span className="material-symbols-outlined text-[16px]">check_circle</span>
                               Plano Ativo
+                            </button>
+                          ) : isFuturePlan ? (
+                            <button
+                              disabled
+                              className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">lock</span>
+                              Plano Futuro
                             </button>
                           ) : (
                             <button
