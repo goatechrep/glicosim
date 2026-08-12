@@ -35,6 +35,13 @@ const normalizeRecord = (record: any): any => {
   return { ...record, timestamp };
 };
 
+const sortRecordsAscending = (records: any[]): any[] =>
+  [...records].sort((a, b) => {
+    const dateCmp = String(a?.data || '').localeCompare(String(b?.data || ''));
+    if (dateCmp !== 0) return dateCmp;
+    return (a?.timestamp || 0) - (b?.timestamp || 0);
+  });
+
 const getUnifiedStorage = () => {
   // Fonte principal do app (usada por mockService e telas de CRUD)
   const primary = readJSON(PRIMARY_STORAGE_KEY);
@@ -159,7 +166,7 @@ export const dataSyncService = {
           const auxData = getAuxiliaryLocalData();
 
           userData = user;
-          records = userRecords;
+          records = sortRecordsAscending(userRecords);
           alerts = userAlerts;
           payments = localStorageData.payments || [];
           medications = auxData.medications;
@@ -170,7 +177,7 @@ export const dataSyncService = {
           const localStorageData = getUnifiedStorage();
           const auxData = getAuxiliaryLocalData();
           userData = getUnifiedUser();
-          records = localStorageData.records || [];
+          records = sortRecordsAscending(localStorageData.records || []);
           alerts = localStorageData.alerts || [];
           payments = localStorageData.payments || [];
           medications = auxData.medications;
@@ -181,7 +188,7 @@ export const dataSyncService = {
         const localStorageData = getUnifiedStorage();
         const auxData = getAuxiliaryLocalData();
         userData = getUnifiedUser();
-        records = localStorageData.records || [];
+        records = sortRecordsAscending(localStorageData.records || []);
         alerts = localStorageData.alerts || [];
         payments = localStorageData.payments || [];
         medications = auxData.medications;
@@ -190,7 +197,7 @@ export const dataSyncService = {
 
       const snapshot: DataSnapshot = {
         user: userData,
-        records,
+        records: sortRecordsAscending(records),
         alerts,
         payments,
         medications,

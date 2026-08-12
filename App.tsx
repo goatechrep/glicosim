@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, NavLink, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, NavLink, Link, useLocation } from 'react-router-dom';
 import { UserProfile } from './types';
 import { supabaseService, supabaseClient } from './services/supabaseService';
 
@@ -49,6 +49,26 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const LOCAL_USER_KEY = 'glicosim_user';
+
+const getStoredUser = (): UserProfile | null => {
+  const localUser = localStorage.getItem(LOCAL_USER_KEY);
+  if (!localUser) return null;
+
+  try {
+    return JSON.parse(localUser) as UserProfile;
+  } catch (e) {
+    localStorage.removeItem(LOCAL_USER_KEY);
+    return null;
+  }
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const isFetchFailure = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes('failed to fetch');
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -69,18 +89,13 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       try {
 
         // Primeiro tentar carregar do localStorage (offline-first)
-        const localUser = localStorage.getItem('glicosim_user');
+        const localUser = getStoredUser();
         if (localUser) {
-          try {
-            const userData = JSON.parse(localUser);
-            if (mounted) {
-              setUser(userData);
-              setLoading(false);
-            }
-            return;
-          } catch (e) {
-            localStorage.removeItem('glicosim_user');
+          if (mounted) {
+            setUser(localUser);
+            setLoading(false);
           }
+          return;
         }
 
         // Se não tiver no localStorage, tentar do Supabase
@@ -91,7 +106,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if (session?.user) {
           const userProfile = await supabaseService.ensureUserProfile(session.user.id);
           if (userProfile && mounted) {
-            localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
+            localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userProfile));
             setUser(userProfile);
           }
         } else {
@@ -117,7 +132,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           try {
             const userProfile = await supabaseService.ensureUserProfile(session.user.id);
             if (userProfile) {
-              localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
+              localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userProfile));
               setUser(userProfile);
               setSessionExpired(false);
             } else {
@@ -162,13 +177,27 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, [user?.theme]);
 
   const login = async (email: string, password: string) => {
-    await supabaseService.signIn(email, password);
+    try {
+      await supabaseService.signIn(email, password);
+    } catch (error) {
+      const localUser = getStoredUser();
+      const isSameUser = localUser?.email && normalizeEmail(localUser.email) === normalizeEmail(email);
+
+      if (isFetchFailure(error) && isSameUser) {
+        console.warn('Login via Supabase falhou por rede; usando perfil salvo no localStorage.');
+        setUser(localUser);
+        setSessionExpired(false);
+        return;
+      }
+
+      throw error;
+    }
     // o novo usuário será atualizado pelo listener onAuthStateChange
   };
 
   const logout = () => {
     supabaseService.signOut();
-    localStorage.removeItem('glicosim_user');
+    localStorage.removeItem(LOCAL_USER_KEY);
     setUser(null);
   };
 
@@ -177,7 +206,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (currentUser) {
       const userProfile = await supabaseService.ensureUserProfile(currentUser.id);
       if (userProfile) {
-        localStorage.setItem('glicosim_user', JSON.stringify(userProfile));
+        localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userProfile));
         setUser(userProfile);
         setSessionExpired(false);
       } else {
@@ -436,7 +465,7 @@ const LogoutButton: React.FC = () => {
 };
 
 const DashboardMobileControls: React.FC = () => {
-  const { pathname } = window.location.hash.includes('#') ? { pathname: window.location.hash.split('?')[0].replace('#', '') } : { pathname: '/' };
+  const location = useLocation();
   const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
   const [showRefreshPopover, setShowRefreshPopover] = useState(false);
@@ -464,7 +493,7 @@ const DashboardMobileControls: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (pathname !== '/' && pathname !== '') return null;
+  if (location.pathname !== '/') return null;
 
   const handleRefresh = async () => {
     try {

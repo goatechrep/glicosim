@@ -72,6 +72,7 @@ const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [records, setRecords] = useState<GlucoseRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');
   const [lowStockMeds, setLowStockMeds] = useState<any[]>([]);
   const [dueReminders, setDueReminders] = useState<any[]>([]);
@@ -191,24 +192,42 @@ const DashboardPage: React.FC = () => {
   };
 
   const loadData = useCallback(async () => {
-    const [s, r, lowStock, reminders] = await Promise.all([
-      dataSyncService.getDashboardStats(),
-      dataSyncService.getRecords(),
-      Promise.resolve(medicationService.getLowStockMedications()),
-      Promise.resolve(reminderService.getDueReminders()),
-    ]);
-    setStats(s);
-    setRecords(r);
-    setLowStockMeds(lowStock);
-    setDueReminders(reminders);
-    setRecentActivities(activityService.getRecentActivities(5));
+    setLoadError(null);
+    try {
+      const [s, r, lowStock, reminders] = await Promise.all([
+        dataSyncService.getDashboardStats(),
+        dataSyncService.getRecords(),
+        Promise.resolve(medicationService.getLowStockMedications()),
+        Promise.resolve(reminderService.getDueReminders()),
+      ]);
+      setStats(s);
+      setRecords(r);
+      setLowStockMeds(lowStock);
+      setDueReminders(reminders);
+      setRecentActivities(activityService.getRecentActivities(5));
 
-    if (reminders.length > 0 && !reminderModalOpen) {
-      setCurrentReminder(reminders[0]);
-      setReminderModalOpen(true);
+      if (reminders.length > 0 && !reminderModalOpen) {
+        setCurrentReminder(reminders[0]);
+        setReminderModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+      setStats({
+        lastGlicemy: 0,
+        average: 0,
+        goalStatus: 'Desconhecido',
+        totalRecords: 0,
+        alerts: [],
+        payments: []
+      });
+      setRecords([]);
+      setLowStockMeds([]);
+      setDueReminders([]);
+      setRecentActivities([]);
+      setLoadError('Nao foi possivel carregar todos os dados do painel.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [reminderModalOpen]);
 
   useEffect(() => {
@@ -359,19 +378,134 @@ const DashboardPage: React.FC = () => {
   );
 
   if (loading) return (
-    <div className="flex flex-col gap-8">
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
-      </div>
-      <div className="grid gap-8 md:grid-cols-12">
-        <div className="md:col-span-8">
-          <SkeletonChart />
+    <div className="flex flex-col gap-3 md:gap-4 animate-fade-in overflow-x-hidden">
+      <PWAInstallPrompt mode="banner" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 sm:gap-4 animate-slide-up-subtle min-w-0">
+          {user?.foto && (
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 border-orange-200 dark:border-orange-900/30 shrink-0">
+              <img src={user.foto} alt={user.nome} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">Olá, <span className="text-orange-600">{user?.nome?.split(' ')[0] || 'Usuário'}!</span></h2>
+              <span className={`px-2 py-1 text-[8px] font-black uppercase tracking-wider rounded ${user?.plano === 'PRO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                {user?.plano}
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              {user?.plano === 'PRO' && lastSync ? `Última sincronização: ${lastSync}` : 'Atualize para o PRO para sincronizar seus dados na nuvem'}
+            </p>
+          </div>
         </div>
-        <div className="md:col-span-4">
-          <SkeletonChart />
+        <div className="flex items-center gap-2.5 sm:gap-3 self-start sm:self-auto">
+          <div
+            className="relative popover-container hidden md:block"
+            onMouseEnter={() => handleRefreshHover(true)}
+            onMouseLeave={() => handleRefreshHover(false)}
+          >
+            <button
+              onClick={() => setShowRefreshPopover(!showRefreshPopover)}
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all shadow-sm"
+              aria-label="Limpar cache e recarregar"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
+
+            {showRefreshPopover && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-4 z-[100] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-100 dark:border-blue-800 shadow-2xl animate-fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-black uppercase text-blue-600 tracking-widest mb-1">Atualização Forçada</h4>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                      Isso removerá o cache do seu navegador e carregará os dados mais recentes da nuvem.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { handleRefresh(); setShowRefreshPopover(false); }}
+                  className="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 transition-all font-bold"
+                >
+                  Limpar Agora
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div
+            className="relative popover-container hidden md:block"
+            onMouseEnter={() => handleOfflineHover(true)}
+            onMouseLeave={() => handleOfflineHover(false)}
+          >
+            <div
+              onClick={() => user?.plano === 'FREE' && setShowOfflinePopover(!showOfflinePopover)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${isOnline && user?.plano === 'PRO' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400' : 'border-red-500 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400'}`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{isOnline ? 'wifi' : 'wifi_off'}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isOnline && user?.plano === 'PRO' ? 'Sincronizado' : 'Offline'}</span>
+            </div>
+
+            {showOfflinePopover && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-4 z-[100] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-red-100 dark:border-red-800 shadow-2xl animate-fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">cloud_off</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-[11px] font-black uppercase text-red-600 tracking-widest mb-1">Backup Desativado</h4>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
+                      Na versão FREE, seus dados ficam salvos apenas neste aparelho. Torne-se PRO para backup em nuvem.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { window.location.hash = '#/pro'; setShowOfflinePopover(false); }}
+                  className="w-full py-2 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-orange-700 transition-all flex items-center justify-center gap-2 font-bold"
+                >
+                  <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                  Assinar PRO
+                </button>
+              </div>
+            )}
+          </div>
+
+          {user?.plano === 'PRO' && (
+            <button
+              onClick={handleSync}
+              disabled={!isOnline || syncing}
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-full border font-black text-[10px] uppercase tracking-widest transition-all ${isOnline ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 border-emerald-100 dark:border-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/10 text-red-600 border-red-100 dark:border-red-900/20 opacity-50 cursor-not-allowed'}`}
+            >
+              <span className={`material-symbols-outlined text-[16px] ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_sync'}</span>
+              <span className="hidden md:inline">{syncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loadError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-bold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+          {loadError}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-8">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div className="grid gap-8 md:grid-cols-12">
+          <div className="md:col-span-8">
+            <SkeletonChart />
+          </div>
+          <div className="md:col-span-4">
+            <SkeletonChart />
+          </div>
         </div>
       </div>
     </div>
@@ -491,6 +625,12 @@ const DashboardPage: React.FC = () => {
         </div>
 
       </div>
+
+      {loadError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-bold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+          {loadError}
+        </div>
+      )}
 
       {
         lowStockMeds.length > 0 && (

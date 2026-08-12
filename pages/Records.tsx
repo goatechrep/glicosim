@@ -21,6 +21,25 @@ interface Toast {
   id: number;
 }
 
+const PERIOD_ORDER = [
+  Periodo.CAFE_MANHA,
+  Periodo.ALMOCO,
+  Periodo.LANCHE,
+  Periodo.JANTAR,
+  Periodo.GLICEMIA_DEITAR
+];
+
+const getPeriodoRank = (periodo: Periodo) => {
+  const rank = PERIOD_ORDER.indexOf(periodo);
+  return rank === -1 ? PERIOD_ORDER.length : rank;
+};
+
+const sortRecordsAscending = (items: GlucoseRecord[]) => [...items].sort((a, b) => {
+  const dateCmp = a.data.localeCompare(b.data);
+  if (dateCmp !== 0) return dateCmp;
+  return getPeriodoRank(a.periodo) - getPeriodoRank(b.periodo);
+});
+
 const RecordsPage: React.FC = () => {
   const today = new Date();
   const todayIso = today.toISOString().split('T')[0];
@@ -42,6 +61,8 @@ const RecordsPage: React.FC = () => {
   const [isClearingRecords, setIsClearingRecords] = useState(false);
   const [clearProgress, setClearProgress] = useState({ completed: 0, total: 0 });
   const [isInsertingTestRecords, setIsInsertingTestRecords] = useState(false);
+  const [isTestMonthModalOpen, setIsTestMonthModalOpen] = useState(false);
+  const [testRecordMonth, setTestRecordMonth] = useState(todayIso.slice(0, 7));
 
   const [filterPeriodo, setFilterPeriodo] = useState<string>('Todos');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
@@ -127,7 +148,7 @@ const RecordsPage: React.FC = () => {
     const activeMonth = activeTimelineDate.slice(0, 7);
     const activeYear = activeTimelineDate.slice(0, 4);
 
-    return records.filter(rec => {
+    const visibleRecords = records.filter(rec => {
       const matchPeriodo = filterPeriodo === 'Todos' || rec.periodo === filterPeriodo;
       const matchDateStart = !filterDateStart || rec.data >= filterDateStart;
       const matchDateEnd = !filterDateEnd || rec.data <= filterDateEnd;
@@ -142,6 +163,8 @@ const RecordsPage: React.FC = () => {
         rec.periodo.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchPeriodo && matchDateStart && matchDateEnd && matchTimeline && matchSearch;
     });
+
+    return sortRecordsAscending(visibleRecords);
   }, [records, filterPeriodo, filterDateStart, filterDateEnd, dateScope, activeTimelineDate, debouncedSearch]);
 
   const displayedRecords = useMemo(
@@ -230,6 +253,8 @@ const RecordsPage: React.FC = () => {
     setDateScope('year');
   };
 
+  const getExportRecords = () => sortRecordsAscending(filteredRecords);
+
   const escapeHtml = (value: string): string => (
     value
       .replace(/&/g, '&amp;')
@@ -246,7 +271,7 @@ const RecordsPage: React.FC = () => {
       return;
     }
     const headers = ["Data", "Periodo", "Glicemia (mg/dL)", "Medicamento", "Dose", "Notas"];
-    const rows = filteredRecords.map(r => [
+    const rows = getExportRecords().map(r => [
       r.data.split('-').reverse().join('/'),
       r.periodo,
       r.antesRefeicao,
@@ -279,7 +304,7 @@ const RecordsPage: React.FC = () => {
       paciente: user?.nome,
       email: user?.email,
       dataExportacao: new Date().toLocaleString('pt-BR'),
-      registros: filteredRecords
+      registros: getExportRecords()
     };
 
     const jsonString = JSON.stringify(data, null, 2);
@@ -310,7 +335,7 @@ const RecordsPage: React.FC = () => {
     csvContent += `Email: ${user?.email}\n`;
     csvContent += `Data de Exportação: ${new Date().toLocaleString('pt-BR')}\n\n`;
     
-    const rows = filteredRecords.map(r => [
+    const rows = getExportRecords().map(r => [
       r.data.split('-').reverse().join('/'),
       r.periodo,
       r.antesRefeicao,
@@ -359,7 +384,7 @@ const RecordsPage: React.FC = () => {
 
     const byDate = new Map<string, ReportRow>();
 
-    filteredRecords.forEach(record => {
+    getExportRecords().forEach(record => {
       const dateISO = record.data;
       if (!byDate.has(dateISO)) {
         byDate.set(dateISO, {
@@ -397,7 +422,7 @@ const RecordsPage: React.FC = () => {
       }
     });
 
-    const amgRows = Array.from(byDate.values()).sort((a, b) => b.dataISO.localeCompare(a.dataISO));
+    const amgRows = Array.from(byDate.values()).sort((a, b) => a.dataISO.localeCompare(b.dataISO));
 
     const htmlContent = `
       <html>
@@ -692,20 +717,38 @@ const RecordsPage: React.FC = () => {
     }
   };
 
+  const formatTestRecordMonthLabel = (monthISO: string) => {
+    const [year, month] = monthISO.split('-').map(Number);
+    if (!year || !month) return monthISO;
+    return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
   const handleInsertTestRecords = async () => {
+    if (!testRecordMonth) {
+      addToast("Selecione o mês para gerar os dados.", "info");
+      return;
+    }
+
     try {
       setIsInsertingTestRecords(true);
-      addToast("Inserindo dados de teste...");
-      const inserted = await mockService.addTestRecords();
+      const monthLabel = formatTestRecordMonthLabel(testRecordMonth);
+      addToast(`Inserindo dados de teste de ${monthLabel}...`);
+      const inserted = await mockService.addTestRecords(testRecordMonth);
       activityService.logActivity({
         title: 'Dados de teste inseridos',
-        description: `${inserted} registros de exemplo foram adicionados ao histórico.`,
+        description: `${inserted} registros de exemplo de ${monthLabel} foram adicionados ao histórico.`,
         icon: 'science',
         accent: 'violet',
         category: 'system',
-        metadata: { count: inserted },
+        metadata: { count: inserted, month: testRecordMonth },
       });
       addToast(`${inserted} registros de teste inseridos!`, "success");
+      setIsTestMonthModalOpen(false);
+      setDateScope('month');
+      setActiveTimelineDate(`${testRecordMonth}-01`);
       await loadRecords();
     } catch (error) {
       addToast("Erro ao inserir registros de teste.", "error");
@@ -868,7 +911,7 @@ const RecordsPage: React.FC = () => {
           </div>
           <div className="sm:hidden flex gap-2 w-full">
             <button 
-              onClick={handleInsertTestRecords}
+              onClick={() => setIsTestMonthModalOpen(true)}
               disabled={isInsertingTestRecords || isClearingRecords}
               className="flex-1 flex items-center justify-center px-3 py-2.5 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95"
               title="Inserir dados de teste"
@@ -905,7 +948,7 @@ const RecordsPage: React.FC = () => {
           {/* Desktop: Botões com texto */}
           <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
             <button 
-              onClick={handleInsertTestRecords}
+              onClick={() => setIsTestMonthModalOpen(true)}
               disabled={isInsertingTestRecords || isClearingRecords}
               className="flex items-center justify-center px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
               title="Inserir dados de teste"
@@ -1253,6 +1296,68 @@ const RecordsPage: React.FC = () => {
           </>
         )}
       </div>
+
+      <BaseModal
+        isOpen={isTestMonthModalOpen}
+        onClose={() => {
+          if (!isInsertingTestRecords) {
+            setIsTestMonthModalOpen(false);
+          }
+        }}
+        panelClassName="max-w-sm max-h-[calc(100dvh-2rem)]"
+        bodyClassName="overflow-y-auto px-6 pb-6 pt-6"
+        overlayClassName="z-[3200] bg-slate-950/90 backdrop-blur-2xl p-4 md:p-6"
+        title={<span className="uppercase">Gerar testes</span>}
+        subtitle="Escolha o mes do lancamento antes de inserir o historico de teste."
+        showCloseButton={!isInsertingTestRecords}
+      >
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleInsertTestRecords();
+          }}
+        >
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Mes do lancamento
+            </label>
+            <input
+              type="month"
+              value={testRecordMonth}
+              onChange={(event) => setTestRecordMonth(event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all [color-scheme:dark] focus:border-orange-400 focus:ring-4 focus:ring-orange-100 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:border-orange-500 dark:focus:ring-orange-950/40"
+              required
+              disabled={isInsertingTestRecords}
+            />
+          </div>
+
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
+            Os registros de exemplo serao gerados para todos os dias do mes selecionado.
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={isInsertingTestRecords || !testRecordMonth}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${isInsertingTestRecords ? 'animate-spin' : ''}`}>
+                {isInsertingTestRecords ? 'progress_activity' : 'rocket_launch'}
+              </span>
+              {isInsertingTestRecords ? 'Inserindo' : 'Gerar Lancamento'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTestMonthModalOpen(false)}
+              disabled={isInsertingTestRecords}
+              className="w-full rounded-2xl border-2 border-slate-200 bg-slate-100 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition-all hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </BaseModal>
 
       <BaseModal
         isOpen={isDeleteModalOpen}

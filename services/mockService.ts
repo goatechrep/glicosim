@@ -44,13 +44,30 @@ const recordKey = (data: string, periodo: Periodo): string => `${data}::${period
 const buildTimestamp = (dateISO: string, periodo: Periodo, offset = 0): number =>
   new Date(`${dateISO}T${PERIOD_HOUR[periodo]}`).getTime() + offset;
 
-const buildTestRecordInputs = (): TestRecordInput[] => {
-  const inputs: TestRecordInput[] = [];
+const getTestRecordDateRange = (targetMonth?: string): Date[] => {
+  const selectedMonth = targetMonth?.match(/^(\d{4})-(\d{2})$/);
+
+  if (selectedMonth) {
+    const year = Number(selectedMonth[1]);
+    const monthIndex = Number(selectedMonth[2]) - 1;
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+    return Array.from({ length: daysInMonth }, (_, index) => new Date(year, monthIndex, index + 1));
+  }
+
   const now = new Date();
+  return Array.from(
+    { length: 30 },
+    (_, dayIndex) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30 + dayIndex)
+  );
+};
+
+const buildTestRecordInputs = (targetMonth?: string): TestRecordInput[] => {
+  const inputs: TestRecordInput[] = [];
+  const dates = getTestRecordDateRange(targetMonth);
   const variationCycle = [-18, -12, -8, -5, -2, 0, 4, 8, 12, 18, 24, 28];
 
-  for (let dayIndex = 0; dayIndex < 30; dayIndex += 1) {
-    const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30 + dayIndex);
+  dates.forEach((cursor, dayIndex) => {
     const base = 200;
     const variation = variationCycle[dayIndex % variationCycle.length];
     const dateISO = cursor.toISOString().split('T')[0];
@@ -74,7 +91,7 @@ const buildTestRecordInputs = (): TestRecordInput[] => {
         data: dateISO
       });
     });
-  }
+  });
 
   return inputs.sort((a, b) => {
     const dateCmp = a.data.localeCompare(b.data);
@@ -180,10 +197,10 @@ export const mockService = {
     setStorage(storage);
     return newRecord;
   },
-  addTestRecords: async (): Promise<number> => {
+  addTestRecords: async (targetMonth?: string): Promise<number> => {
     await delay(300);
     const storage = getStorage();
-    const inputs = buildTestRecordInputs();
+    const inputs = buildTestRecordInputs(targetMonth);
     const existingByKey = new Map<string, GlucoseRecord>();
     storage.records.forEach(record => {
       existingByKey.set(recordKey(record.data, record.periodo), record);
