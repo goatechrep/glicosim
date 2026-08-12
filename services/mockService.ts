@@ -71,12 +71,6 @@ const buildTestRecordInputs = (targetMonth?: string): TestRecordInput[] => {
     const base = 200;
     const variation = variationCycle[dayIndex % variationCycle.length];
     const dateISO = cursor.toISOString().split('T')[0];
-    const dayIsHigh = base + variation >= 220;
-    const dayNote = dayIsHigh
-      ? 'comi demais hoje'
-      : dayIndex % 5 === 0
-        ? 'hidratacao baixa no periodo'
-        : '';
 
     PERIOD_ORDER.forEach((periodo, periodIndex) => {
       const before = base + variation + periodIndex * 2;
@@ -87,7 +81,7 @@ const buildTestRecordInputs = (targetMonth?: string): TestRecordInput[] => {
         antesRefeicao: before,
         aposRefeicao: after,
         dose: '6 UI',
-        notes: dayNote,
+        notes: '',
         data: dateISO
       });
     });
